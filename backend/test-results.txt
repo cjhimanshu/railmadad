@@ -1,0 +1,11 @@
+--- Testing LIVE AI Integration ---
+HUGGINGFACE_API_KEY present: true
+
+--- AI Results ---
+Category: other
+Sentiment: negative
+Priority: high
+Confidence: {"category":0.41973960399627686,"sentiment":0.9988094568252563,"priority":0.7}
+Suggested Response: Water leaking from the ceiling in Coach B4, seat 22, is wetting the passengers and luggage. Keep it brief and helpful. As a railway customer service representative, write a professional and empathetic response to this other complaint: "Water leakage in coach B4"
+
+[SUCCESS] AI is fully working!

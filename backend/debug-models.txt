@@ -1,0 +1,14 @@
+--- Model Debug Report ---
+Base: https://router.huggingface.co/hf-inference/models
+
+Testing Model: facebook/bart-large-mnli
+[SUCCESS] Status: 200
+
+Testing Model: distilbert-base-uncased-finetuned-sst-2-english
+[FAILURE] Status: 404
+Data: "Not Found"
+
+Testing Model: gpt2
+[FAILURE] Status: 404
+Data: "Not Found"
+

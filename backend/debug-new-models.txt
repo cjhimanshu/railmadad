@@ -1,0 +1,13 @@
+--- New Model Debug Report ---
+Base: https://router.huggingface.co/hf-inference/models
+
+Testing Model: facebook/bart-large-mnli
+[SUCCESS] Status: 200
+
+Testing Model: cardiffnlp/twitter-roberta-base-sentiment-latest
+[SUCCESS] Status: 200
+
+Testing Model: google/flan-t5-large
+[FAILURE] Status: 404
+Data: "Not Found"
+

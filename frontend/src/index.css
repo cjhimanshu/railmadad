@@ -1,0 +1,190 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    body {
+        @apply bg-gradient-to-br from-railway-light via-white to-blue-50 min-h-screen font-sans antialiased;
+    }
+}
+
+@layer components {
+
+    /* Button Styles */
+    .btn-primary {
+        @apply bg-gradient-to-r from-railway-blue to-blue-600 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none;
+    }
+
+    .btn-secondary {
+        @apply bg-white text-railway-blue border-2 border-railway-blue px-6 py-3 rounded-lg font-semibold hover:bg-railway-blue hover:text-white transition-all duration-300;
+    }
+
+    .btn-danger {
+        @apply bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300;
+    }
+
+    /* Input Styles */
+    .input-field {
+        @apply w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-railway-blue focus:ring-2 focus:ring-railway-blue/20 transition-all duration-300;
+    }
+
+    .input-error {
+        @apply border-red-500 focus:border-red-500 focus:ring-red-500/20;
+    }
+
+    /* Card Styles */
+    .card {
+        @apply bg-white rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 p-6;
+    }
+
+    .card-glass {
+        @apply bg-white/80 backdrop-blur-lg rounded-xl shadow-xl border border-white/20 p-6;
+    }
+
+    /* Badge Styles */
+    .badge {
+        @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
+    }
+
+    .badge-pending {
+        @apply bg-yellow-100 text-yellow-800;
+    }
+
+    .badge-in-progress {
+        @apply bg-blue-100 text-blue-800;
+    }
+
+    .badge-resolved {
+        @apply bg-green-100 text-green-800;
+    }
+
+    .badge-rejected {
+        @apply bg-red-100 text-red-800;
+    }
+
+    .badge-urgent {
+        @apply bg-red-100 text-red-800 animate-pulse;
+    }
+
+    .badge-high {
+        @apply bg-orange-100 text-orange-800;
+    }
+
+    .badge-medium {
+        @apply bg-blue-100 text-blue-800;
+    }
+
+    .badge-low {
+        @apply bg-gray-100 text-gray-800;
+    }
+
+    /* Sentiment Badges */
+    .badge-positive {
+        @apply bg-green-100 text-green-800;
+    }
+
+    .badge-neutral {
+        @apply bg-gray-100 text-gray-800;
+    }
+
+    .badge-negative {
+        @apply bg-red-100 text-red-800;
+    }
+}
+
+@layer utilities {
+    .text-gradient {
+        @apply bg-gradient-to-r from-railway-blue to-railway-orange bg-clip-text text-transparent;
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .animate-slide-up {
+        animation: slideUp 0.5s ease-out;
+    }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #004E89;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #003A6B;
+}
+
+/* Loading Spinner */
+.spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #004E89;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes trainRoll {
+    0%   { transform: translateX(-110%); }
+    100% { transform: translateX(110%); }
+}
+
+@keyframes smokeRise {
+    0%   { transform: translateY(0) scale(0.6); opacity: 0.8; }
+    100% { transform: translateY(-28px) scale(1.8); opacity: 0; }
+}
+
+@keyframes trackScroll {
+    0%   { background-position: 0 0; }
+    100% { background-position: 60px 0; }
+}
+
+@keyframes twinkle {
+    0%, 100% { opacity: 0.2; }
+    50%       { opacity: 1; }
+}
+
+.train-roll {
+    animation: trainRoll 22s linear infinite;
+    white-space: nowrap;
+}
+
+.smoke-1 { animation: smokeRise 1.8s ease-out infinite; }
+.smoke-2 { animation: smokeRise 1.8s ease-out 0.6s infinite; }
+.smoke-3 { animation: smokeRise 1.8s ease-out 1.2s infinite; }
+
+.track-anim {
+    background-image: repeating-linear-gradient(90deg, transparent, transparent 18px, rgba(156,163,175,0.5) 18px, rgba(156,163,175,0.5) 20px);
+    animation: trackScroll 0.6s linear infinite;
+}

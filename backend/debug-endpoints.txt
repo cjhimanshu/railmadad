@@ -1,0 +1,22 @@
+--- Endpoint Debug Report ---
+Token present: true
+
+Trying: https://api-inference.huggingface.co/models/facebook/bart-large-mnli
+[FAILURE] Status: 410
+Data: {"error":"https://api-inference.huggingface.co is no longer supported. Please use https://router.huggingface.co instead."}
+
+Trying: https://router.huggingface.co/hf-inference/models/facebook/bart-large-mnli
+[SUCCESS] Status: 200
+
+Trying: https://router.huggingface.co/hf-inference/facebook/bart-large-mnli
+[FAILURE] Status: 404
+Data: "Not Found"
+
+Trying: https://router.huggingface.co/v1/models/facebook/bart-large-mnli
+[FAILURE] Status: 404
+Data: "Not Found"
+
+Trying: https://api-inference.huggingface.co/facebook/bart-large-mnli
+[FAILURE] Status: 410
+Data: {"error":"https://api-inference.huggingface.co is no longer supported. Please use https://router.huggingface.co instead."}
+

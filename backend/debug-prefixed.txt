@@ -1,0 +1,10 @@
+--- Prefixed Model Debug Report ---
+Base: https://router.huggingface.co/hf-inference/models
+
+Testing Model: distilbert/distilbert-base-uncased-finetuned-sst-2-english
+[SUCCESS] Status: 200
+
+Testing Model: openai-community/gpt2
+[FAILURE] Status: 404
+Data: "Not Found"
+
