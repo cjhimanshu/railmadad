@@ -65,16 +65,23 @@ exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    // Validate email & password
+    // Validate identifier & password
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Please provide email and password",
+        message: "Please provide email/mobile and password",
       });
     }
 
-    // Check for user (include password for comparison)
-    const user = await User.findOne({ email }).select("+password");
+    // Determine if input is mobile number or email
+    const isMobile = /^\d{10}$/.test(email.trim());
+
+    // Check for user by email OR phone
+    const user = await User.findOne(
+      isMobile
+        ? { phone: email.trim() }
+        : { email: email.trim().toLowerCase() },
+    ).select("+password");
 
     if (!user) {
       return res.status(401).json({

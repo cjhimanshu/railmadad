@@ -84,6 +84,40 @@ exports.updateComplaintStatus = async (req, res, next) => {
       complaint.closureBlocked = false;
     }
 
+    // Sync 4-level public tracking status
+    if (status) {
+      const prevTracking = complaint.trackingStatus;
+      let newTracking = prevTracking;
+      if (status === "in_progress" && prevTracking === "registered") {
+        newTracking = "sent_to_authority";
+      } else if (status === "resolved") {
+        newTracking = "resolved";
+      }
+      if (newTracking !== prevTracking) {
+        complaint.trackingStatus = newTracking;
+        complaint.trackingHistory.push({
+          stage: newTracking,
+          updatedAt: new Date(),
+          note:
+            status === "resolved"
+              ? "Complaint resolved."
+              : "Complaint sent to concerned authority.",
+        });
+      }
+    }
+    if (
+      assignedDepartment &&
+      assignedDepartment !== "unassigned" &&
+      complaint.trackingStatus === "registered"
+    ) {
+      complaint.trackingStatus = "sent_to_authority";
+      complaint.trackingHistory.push({
+        stage: "sent_to_authority",
+        updatedAt: new Date(),
+        note: `Assigned to ${assignedDepartment} department.`,
+      });
+    }
+
     await complaint.save();
     await complaint.populate("userId", "name email phone");
 
@@ -115,6 +149,19 @@ exports.markAuthorityDone = async (req, res, next) => {
     complaint.authorityMarkedAt = new Date();
     if (actionNotes) complaint.authorityActionNotes = actionNotes;
     complaint.status = "in_progress"; // ensure status reflects action ongoing
+
+    // Advance public tracking to "authority_taken_action"
+    if (
+      complaint.trackingStatus !== "resolved" &&
+      complaint.trackingStatus !== "authority_taken_action"
+    ) {
+      complaint.trackingStatus = "authority_taken_action";
+      complaint.trackingHistory.push({
+        stage: "authority_taken_action",
+        updatedAt: new Date(),
+        note: `Authority has taken action. ${actionNotes || ""}`.trim(),
+      });
+    }
 
     complaint.automationLog.push({
       action: "AUTHORITY_MARKED_DONE",
@@ -318,6 +365,42 @@ exports.getDispatchLog = async (req, res, next) => {
       count: dispatches.length,
       queueStatus,
       data: dispatches,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Bulk send complaints to authority (update trackingStatus)
+// @route   POST /api/admin/bulk-send-to-authority
+// @access  Private/Admin
+exports.bulkSendToAuthority = async (req, res, next) => {
+  try {
+    const { status, priority } = req.body;
+
+    // Build filter — only act on complaints not already sent or resolved
+    const filter = {
+      trackingStatus: { $in: ["registered"] },
+    };
+    if (status) filter.status = status;
+    if (priority) filter.priority = priority;
+
+    const now = new Date();
+    const result = await Complaint.updateMany(filter, {
+      $set: { trackingStatus: "sent_to_authority" },
+      $push: {
+        trackingHistory: {
+          stage: "sent_to_authority",
+          updatedAt: now,
+          note: "Bulk dispatched to authority by admin.",
+        },
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `${result.modifiedCount} complaint(s) sent to authority.`,
+      modifiedCount: result.modifiedCount,
     });
   } catch (error) {
     next(error);

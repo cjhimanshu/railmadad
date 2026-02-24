@@ -14,6 +14,13 @@ import {
   FaBoxOpen,
   FaCheck,
   FaHourglass,
+  FaArrowRight,
+  FaTimes,
+  FaCheckCircle,
+  FaFire,
+  FaLayerGroup,
+  FaPaperPlane,
+  FaSpinner,
 } from "react-icons/fa";
 
 // ─── Priority colours ─────────────────────────────────────────────────────────
@@ -249,9 +256,13 @@ const ControlUnitPanel = () => {
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("analytics");
   const [statFilter, setStatFilter] = useState({});
+  const [activeCardLabel, setActiveCardLabel] = useState(null);
+  const [showComplaints, setShowComplaints] = useState(false);
   const [stats, setStats] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sendingAuthority, setSendingAuthority] = useState(null);
+  const [authoritySentLabel, setAuthoritySentLabel] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -280,130 +291,316 @@ const AdminDashboard = () => {
     );
   }
 
+  const STAT_CARDS = [
+    {
+      label: "Pending",
+      val: stats?.pending || 0,
+      gradient: "from-amber-400 via-orange-400 to-orange-500",
+      shadow: "shadow-orange-200",
+      ring: "ring-orange-300",
+      bg: "from-orange-50 to-amber-50",
+      accent: "text-orange-500",
+      bar: "bg-orange-400",
+      icon: FaClock,
+      desc: "Awaiting assignment",
+      filter: { status: "pending" },
+    },
+    {
+      label: "In Progress",
+      val: stats?.inProgress || 0,
+      gradient: "from-blue-400 via-blue-500 to-indigo-500",
+      shadow: "shadow-blue-200",
+      ring: "ring-blue-300",
+      bg: "from-blue-50 to-indigo-50",
+      accent: "text-blue-500",
+      bar: "bg-blue-400",
+      icon: FaLayerGroup,
+      desc: "Being handled",
+      filter: { status: "in_progress" },
+    },
+    {
+      label: "Urgent",
+      val: stats?.urgent || 0,
+      gradient: "from-rose-400 via-red-500 to-red-600",
+      shadow: "shadow-red-200",
+      ring: "ring-red-300",
+      bg: "from-red-50 to-rose-50",
+      accent: "text-red-500",
+      bar: "bg-red-500",
+      icon: FaFire,
+      desc: "Needs immediate action",
+      filter: { priority: "urgent" },
+    },
+    {
+      label: "Resolved",
+      val: stats?.resolved || 0,
+      gradient: "from-emerald-400 via-green-500 to-teal-500",
+      shadow: "shadow-green-200",
+      ring: "ring-green-300",
+      bg: "from-green-50 to-emerald-50",
+      accent: "text-green-500",
+      bar: "bg-green-500",
+      icon: FaCheckCircle,
+      desc: "Successfully closed",
+      filter: { status: "resolved" },
+    },
+  ];
+
+  const total =
+    (stats?.pending || 0) + (stats?.inProgress || 0) + (stats?.resolved || 0);
+
+  const handleSendToAuthority = async (e, card) => {
+    e.stopPropagation();
+    if (!window.confirm(`Send all "${card.label}" complaints to authority?`))
+      return;
+    setSendingAuthority(card.label);
+    try {
+      const payload = {};
+      if (card.filter.status) payload.status = card.filter.status;
+      if (card.filter.priority) payload.priority = card.filter.priority;
+      const res = await api.post("/admin/bulk-send-to-authority", payload);
+      setAuthoritySentLabel(card.label);
+      setTimeout(() => setAuthoritySentLabel(null), 3000);
+      alert(res.data.message);
+      fetchData();
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to send to authority.");
+    } finally {
+      setSendingAuthority(null);
+    }
+  };
+
+  const handleCardClick = (card) => {
+    setStatFilter(card.filter);
+    setActiveCardLabel(card.label);
+    setShowComplaints(true);
+    setActiveTab("complaints");
+    setTimeout(() => {
+      document
+        .getElementById("complaint-section")
+        ?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-railway-light via-white to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-50">
       <Navbar />
 
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8 animate-fade-in">
-          <h1 className="text-4xl font-bold text-railway-dark mb-2">
-            Admin Dashboard
-          </h1>
-          <p className="text-gray-600">Manage complaints and view analytics</p>
+        <div className="mb-8 animate-fade-in flex items-start justify-between">
+          <div>
+            <h1 className="text-4xl font-bold text-railway-dark mb-1">
+              Admin Dashboard
+            </h1>
+            <p className="text-gray-500">
+              Monitor complaints, track performance, dispatch actions
+            </p>
+          </div>
+          <button
+            onClick={fetchData}
+            className="flex items-center gap-2 text-sm bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-xl shadow-sm hover:bg-gray-50 transition-all"
+          >
+            ↻ Refresh
+          </button>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-slide-up">
-          {[
-            {
-              label: "Pending",
-              val: stats?.pending || 0,
-              color: "from-yellow-500 to-yellow-600",
-              tab: "complaints",
-              filter: "pending",
-              icon: FaClock,
-            },
-            {
-              label: "In Progress",
-              val: stats?.inProgress || 0,
-              color: "from-blue-500 to-blue-600",
-              tab: "complaints",
-              filter: "in_progress",
-              icon: FaList,
-            },
-            {
-              label: "Urgent",
-              val: stats?.urgent || 0,
-              color: "from-red-500 to-red-600",
-              tab: "complaints",
-              filter: "urgent",
-              icon: FaExclamationTriangle,
-            },
-            {
-              label: "Resolved",
-              val: stats?.resolved || 0,
-              color: "from-green-500 to-green-600",
-              tab: "complaints",
-              filter: "resolved",
-              icon: FaChartBar,
-            },
-          ].map((s) => {
-            const Icon = s.icon;
+        {/* ── BIG Stat Cards ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10 animate-slide-up">
+          {STAT_CARDS.map((card) => {
+            const Icon = card.icon;
+            const pct = total > 0 ? Math.round((card.val / total) * 100) : 0;
+            const isActive = activeCardLabel === card.label && showComplaints;
             return (
               <button
-                key={s.label}
-                onClick={() => {
-                  setActiveTab(s.tab);
-                  setStatFilter(
-                    s.label === "Urgent"
-                      ? { priority: "urgent" }
-                      : { status: s.filter === "urgent" ? "" : s.filter },
-                  );
-                }}
-                className={`card bg-gradient-to-br ${s.color} text-white w-full text-left transition-all hover:scale-105 hover:shadow-xl`}
+                key={card.label}
+                onClick={() => handleCardClick(card)}
+                className={`relative overflow-hidden rounded-2xl p-px transition-all duration-300 hover:scale-105 hover:shadow-2xl ${isActive ? `ring-4 ${card.ring} scale-105 shadow-2xl` : `shadow-lg ${card.shadow}`}`}
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold opacity-90">
-                      {s.label}
-                    </h3>
-                    <p className="text-4xl font-bold mt-2">{s.val}</p>
+                {/* gradient border */}
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${card.gradient} rounded-2xl`}
+                />
+                {/* card body */}
+                <div
+                  className={`relative rounded-2xl bg-gradient-to-br ${card.bg} p-6 h-full flex flex-col`}
+                >
+                  {/* top row */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div
+                      className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${card.gradient} flex items-center justify-center shadow-md`}
+                    >
+                      <Icon className="text-white text-2xl" />
+                    </div>
+                    <span
+                      className={`text-xs font-bold uppercase tracking-widest ${card.accent} bg-white/70 px-2 py-1 rounded-full`}
+                    >
+                      {card.label}
+                    </span>
                   </div>
-                  <Icon className="text-5xl opacity-20" />
+
+                  {/* number */}
+                  <p className="text-5xl font-extrabold text-gray-800 leading-none mb-1">
+                    {card.val}
+                  </p>
+                  <p className="text-sm text-gray-500 mb-4">{card.desc}</p>
+
+                  {/* progress bar */}
+                  <div className="mt-auto">
+                    <div className="flex justify-between text-xs text-gray-400 mb-1">
+                      <span>Share of total</span>
+                      <span>{pct}%</span>
+                    </div>
+                    <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-2 rounded-full ${card.bar} transition-all duration-700`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* click hint */}
+                  <div
+                    className={`mt-4 flex items-center gap-1 text-xs font-semibold ${card.accent}`}
+                  >
+                    {isActive ? "Showing below ↓" : "Click to view"}
+                    <FaArrowRight className="text-[10px]" />
+                  </div>
+
+                  {/* Send to Authority button */}
+                  <button
+                    onClick={(e) => handleSendToAuthority(e, card)}
+                    disabled={sendingAuthority === card.label}
+                    className={`mt-3 w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all duration-300 ${
+                      authoritySentLabel === card.label
+                        ? "bg-green-500 text-white"
+                        : `bg-gradient-to-r ${card.gradient} text-white hover:opacity-90 active:scale-95`
+                    } shadow-md disabled:opacity-60`}
+                  >
+                    {sendingAuthority === card.label ? (
+                      <>
+                        <FaSpinner className="animate-spin" />
+                        Sending...
+                      </>
+                    ) : authoritySentLabel === card.label ? (
+                      <>
+                        <FaCheckCircle />
+                        Sent!
+                      </>
+                    ) : (
+                      <>
+                        <FaPaperPlane />
+                        Send to Authority
+                      </>
+                    )}
+                  </button>
                 </div>
-                <p className="text-xs opacity-60 mt-2">Click to view →</p>
               </button>
             );
           })}
         </div>
 
-        {/* Tabs */}
-        <div className="flex flex-wrap gap-3 mb-6">
-          <button
-            onClick={() => setActiveTab("analytics")}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-              activeTab === "analytics"
-                ? "bg-railway-blue text-white shadow-lg"
-                : "bg-white text-railway-blue hover:bg-gray-50"
-            }`}
-          >
-            <FaChartBar className="inline mr-2" />
-            Analytics
-          </button>
-          <button
-            onClick={() => setActiveTab("complaints")}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-              activeTab === "complaints"
-                ? "bg-railway-blue text-white shadow-lg"
-                : "bg-white text-railway-blue hover:bg-gray-50"
-            }`}
-          >
-            <FaList className="inline mr-2" />
-            Manage Complaints
-          </button>
-          <button
-            onClick={() => setActiveTab("controlUnit")}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-              activeTab === "controlUnit"
-                ? "bg-red-600 text-white shadow-lg"
-                : "bg-white text-red-600 hover:bg-red-50 border border-red-200"
-            }`}
-          >
-            <FaSatelliteDish className="inline mr-2" />
-            Control Unit
-          </button>
+        {/* Total banner */}
+        <div className="mb-8 bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-4 flex flex-wrap items-center gap-6">
+          <div>
+            <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">
+              Total Complaints
+            </p>
+            <p className="text-3xl font-bold text-gray-800">
+              {stats?.total || total}
+            </p>
+          </div>
+          <div className="h-10 w-px bg-gray-200 hidden sm:block" />
+          <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+            {STAT_CARDS.map((c) => (
+              <span key={c.label} className="flex items-center gap-1.5">
+                <span className={`w-2.5 h-2.5 rounded-full ${c.bar}`} />
+                {c.label}: <strong className="text-gray-700">{c.val}</strong>
+              </span>
+            ))}
+          </div>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <button
+              onClick={() => {
+                setActiveTab("analytics");
+                setShowComplaints(false);
+                setActiveCardLabel(null);
+              }}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${activeTab === "analytics" && !showComplaints ? "bg-railway-blue text-white shadow" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+            >
+              <FaChartBar className="inline mr-1" /> Analytics
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab("complaints");
+                setStatFilter({});
+                setActiveCardLabel("All");
+                setShowComplaints(true);
+                setTimeout(
+                  () =>
+                    document
+                      .getElementById("complaint-section")
+                      ?.scrollIntoView({ behavior: "smooth" }),
+                  100,
+                );
+              }}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${activeTab === "complaints" && showComplaints ? "bg-railway-blue text-white shadow" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+            >
+              <FaList className="inline mr-1" /> All Complaints
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab("controlUnit");
+                setShowComplaints(false);
+                setActiveCardLabel(null);
+              }}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${activeTab === "controlUnit" ? "bg-red-600 text-white shadow" : "bg-gray-100 text-red-600 hover:bg-red-50"}`}
+            >
+              <FaSatelliteDish className="inline mr-1" /> Control Unit
+            </button>
+          </div>
         </div>
 
-        {/* Content */}
-        {activeTab === "analytics" && <AnalyticsCharts analytics={analytics} />}
-        {activeTab === "complaints" && (
-          <ComplaintManagement
-            onUpdate={fetchData}
-            initialFilter={statFilter}
-          />
+        {/* Analytics */}
+        {activeTab === "analytics" && !showComplaints && (
+          <AnalyticsCharts analytics={analytics} />
         )}
-        {activeTab === "controlUnit" && <ControlUnitPanel />}
+
+        {/* Control Unit */}
+        {activeTab === "controlUnit" && !showComplaints && <ControlUnitPanel />}
+
+        {/* Complaints section — only appears after card click */}
+        {showComplaints && (
+          <div id="complaint-section" className="animate-slide-up">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">
+                  {activeCardLabel === "All"
+                    ? "All Complaints"
+                    : `${activeCardLabel} Complaints`}
+                </h2>
+                <p className="text-sm text-gray-500">
+                  {activeCardLabel === "All"
+                    ? "Showing all complaints"
+                    : `Filtered by: ${activeCardLabel.toLowerCase()}`}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowComplaints(false);
+                  setActiveCardLabel(null);
+                }}
+                className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 bg-white border border-gray-200 px-4 py-2 rounded-xl shadow-sm transition-all hover:bg-gray-50"
+              >
+                <FaTimes /> Close
+              </button>
+            </div>
+            <ComplaintManagement
+              onUpdate={fetchData}
+              initialFilter={statFilter}
+            />
+          </div>
+        )}
       </div>
       <Footer />
     </div>

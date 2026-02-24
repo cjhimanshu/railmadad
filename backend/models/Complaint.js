@@ -5,7 +5,8 @@ const complaintSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false,
+      default: null,
     },
     title: {
       type: String,
@@ -15,9 +16,9 @@ const complaintSchema = new mongoose.Schema(
     },
     description: {
       type: String,
-      required: [true, "Please provide a complaint description"],
       trim: true,
       maxlength: [2000, "Description cannot be more than 2000 characters"],
+      default: "",
     },
     category: {
       type: String,
@@ -25,6 +26,8 @@ const complaintSchema = new mongoose.Schema(
         "cleanliness",
         "safety",
         "staff_behavior",
+        "staff_complaint",
+        "overcharging",
         "facilities",
         "ticketing",
         "punctuality",
@@ -44,20 +47,48 @@ const complaintSchema = new mongoose.Schema(
       enum: ["pending", "in_progress", "resolved", "rejected"],
       default: "pending",
     },
+    // 4-level public tracking status
+    trackingStatus: {
+      type: String,
+      enum: [
+        "registered",
+        "sent_to_authority",
+        "authority_taken_action",
+        "resolved",
+      ],
+      default: "registered",
+    },
+    trackingHistory: [
+      {
+        stage: {
+          type: String,
+          enum: [
+            "registered",
+            "sent_to_authority",
+            "authority_taken_action",
+            "resolved",
+          ],
+        },
+        updatedAt: { type: Date, default: Date.now },
+        note: { type: String, default: "" },
+      },
+    ],
     pnrNumber: {
       type: String,
       trim: true,
       required: [true, "Please provide your PNR number"],
       match: [/^\d{10}$/, "PNR number must be exactly 10 digits"],
     },
+    trainNumber: {
+      type: String,
+      trim: true,
+      default: null,
+    },
     contactMobile: {
       type: String,
       trim: true,
       required: [true, "Please provide your mobile number"],
-      match: [
-        /^[6-9]\d{9}$/,
-        "Mobile number must be a valid 10-digit Indian number",
-      ],
+      match: [/^\d{10}$/, "Mobile number must be a 10-digit number"],
     },
     contactEmail: {
       type: String,
@@ -153,5 +184,7 @@ complaintSchema.index({ userId: 1, createdAt: -1 });
 complaintSchema.index({ status: 1 });
 complaintSchema.index({ category: 1 });
 complaintSchema.index({ pnrNumber: 1 });
+complaintSchema.index({ contactEmail: 1 });
+complaintSchema.index({ contactMobile: 1 });
 
 module.exports = mongoose.model("Complaint", complaintSchema);

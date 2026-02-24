@@ -6,6 +6,8 @@ const CATEGORY_DEPARTMENT_MAP = {
   cleanliness: "maintenance",
   safety: "security",
   staff_behavior: "customer_service",
+  staff_complaint: "customer_service",
+  overcharging: "operations",
   facilities: "maintenance",
   ticketing: "operations",
   punctuality: "operations",

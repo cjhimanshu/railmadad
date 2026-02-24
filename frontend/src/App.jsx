@@ -13,6 +13,9 @@ import AdminLogin from "./pages/AdminLogin";
 import Register from "./pages/Register";
 import UserDashboard from "./pages/UserDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import TrackComplaint from "./pages/TrackComplaint";
+import SubmitComplaint from "./pages/SubmitComplaint";
+import LandingPage from "./pages/LandingPage";
 
 function App() {
   return (
@@ -21,9 +24,21 @@ function App() {
         <div className="App">
           <Routes>
             {/* Public Routes */}
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/submit" element={<SubmitComplaint />} />
+
+            {/* Protected: Track Status (requires login) */}
+            <Route
+              path="/track"
+              element={
+                <ProtectedRoute>
+                  <TrackComplaint />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Protected User Routes */}
             <Route
@@ -46,8 +61,7 @@ function App() {
             />
 
             {/* Default Route */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
 
           {/* Toast Notifications */}

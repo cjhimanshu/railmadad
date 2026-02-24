@@ -1,9 +1,18 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 import api from "../utils/api";
 import { useAuth } from "../context/AuthContext";
-import { FaTrain, FaEnvelope, FaLock, FaShieldAlt } from "react-icons/fa";
+import {
+  FaTrain,
+  FaEnvelope,
+  FaLock,
+  FaShieldAlt,
+  FaFileAlt,
+  FaBolt,
+  FaArrowRight,
+  FaPhone,
+} from "react-icons/fa";
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -12,7 +21,10 @@ const Login = () => {
   });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
+  // If redirected from a protected page, go back there after login
+  const returnTo = location.state?.from || null;
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -29,11 +41,13 @@ const Login = () => {
       login(user, token);
       toast.success("Login successful!");
 
-      // Redirect based on role
+      // Redirect based on role or return destination
       if (user.role === "admin") {
         navigate("/admin");
+      } else if (returnTo && returnTo !== "/login" && returnTo !== "/") {
+        navigate(returnTo);
       } else {
-        navigate("/dashboard");
+        navigate("/track");
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -53,7 +67,39 @@ const Login = () => {
             </div>
           </div>
           <h1 className="text-4xl font-bold text-gradient mb-2">RailMadad</h1>
-          <p className="text-gray-600">AI-Powered Railway Complaint Portal</p>
+          <p className="text-gray-600">Login to track your complaint status</p>
+        </div>
+
+        {/* ── File a Complaint — highlighted CTA above the form ── */}
+        <div className="mb-5 animate-slide-up">
+          <div className="relative overflow-hidden rounded-2xl p-px bg-gradient-to-r from-orange-400 via-yellow-400 to-orange-500 shadow-xl">
+            <div className="relative rounded-2xl bg-gradient-to-br from-orange-50 to-yellow-50 px-5 py-4 overflow-hidden">
+              <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full bg-yellow-300 opacity-20 blur-2xl pointer-events-none" />
+              <div className="absolute -bottom-4 -left-4 w-20 h-20 rounded-full bg-orange-400 opacity-20 blur-2xl pointer-events-none" />
+              <div className="relative flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0 w-11 h-11 rounded-xl bg-gradient-to-br from-orange-400 to-yellow-500 flex items-center justify-center shadow-md">
+                    <FaFileAlt className="text-white text-lg" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-extrabold text-gray-800 leading-snug">
+                      File a Railway Complaint
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Quick · Instant
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  to="/submit"
+                  className="flex-shrink-0 flex items-center gap-1.5 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all hover:scale-105 active:scale-95"
+                >
+                  Start
+                  <FaArrowRight className="text-xs" />
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Login Form */}
@@ -63,20 +109,20 @@ const Login = () => {
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Email */}
+            {/* Email or Mobile */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Email Address
+                Mobile / Email
               </label>
               <div className="relative">
-                <FaEnvelope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <FaPhone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
-                  type="email"
+                  type="text"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
                   className="input-field pl-10"
-                  placeholder="your@email.com"
+                  placeholder="Mobile number or email"
                   required
                 />
               </div>
@@ -107,7 +153,7 @@ const Login = () => {
               disabled={loading}
               className="btn-primary w-full"
             >
-              {loading ? "Logging in..." : "Login"}
+              {loading ? "Logging in..." : "Login & Track My Complaint"}
             </button>
           </form>
 
@@ -132,19 +178,19 @@ const Login = () => {
               Admin? Login here
             </Link>
           </div>
+        </div>
 
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm font-semibold text-blue-800 mb-2">
-              Demo Credentials:
-            </p>
-            <p className="text-xs text-blue-700">
-              User: user@test.com / password123
-            </p>
-            <p className="text-xs text-blue-700">
-              Admin: admin@test.com / password123
-            </p>
-          </div>
+        {/* Demo Credentials */}
+        <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-sm font-semibold text-blue-800 mb-2">
+            Demo Credentials:
+          </p>
+          <p className="text-xs text-blue-700">
+            User: user@test.com / password123
+          </p>
+          <p className="text-xs text-blue-700">
+            Admin: admin@test.com / password123
+          </p>
         </div>
       </div>
     </div>

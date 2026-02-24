@@ -29,6 +29,8 @@ exports.categorizeComplaint = async (text) => {
       "cleanliness",
       "safety",
       "staff behavior",
+      "staff complaint",
+      "overcharging",
       "facilities",
       "ticketing",
       "punctuality",

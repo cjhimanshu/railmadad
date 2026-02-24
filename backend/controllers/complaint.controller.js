@@ -6,32 +6,58 @@ const controlUnitService = require("../services/controlUnit.service");
 
 // @desc    Create new complaint
 // @route   POST /api/complaints
-// @access  Private
+// @access  Public (no login required)
 exports.createComplaint = async (req, res, next) => {
   try {
-    const { title, description, pnrNumber, contactMobile, contactEmail } =
-      req.body;
-
-    // Process complaint with AI
-    const aiResults = await aiService.processComplaintWithAI(
+    const {
       title,
       description,
+      category: userCategory,
+      pnrNumber,
+      trainNumber,
+      contactMobile,
+      contactEmail,
+    } = req.body;
+
+    // Validate required contact info for guest submissions
+    if (!req.user && !contactMobile && !contactEmail) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Please provide a contact mobile or email so you can track your complaint later.",
+      });
+    }
+
+    // Process complaint with AI (use title only if description is empty)
+    const aiResults = await aiService.processComplaintWithAI(
+      title,
+      description || "",
     );
 
     // Prepare complaint data
     const complaintData = {
-      userId: req.user.id,
+      userId: req.user ? req.user.id : null,
       title,
       description,
       pnrNumber: pnrNumber ? pnrNumber.trim() : null,
+      trainNumber: trainNumber ? trainNumber.trim() : null,
       contactMobile: contactMobile ? contactMobile.trim() : null,
       contactEmail:
         contactEmail && contactEmail.trim() !== ""
           ? contactEmail.trim().toLowerCase()
-          : null,
-      category: aiResults.category,
+          : req.user?.email || null,
+      // Use user-selected category if provided, otherwise fall back to AI
+      category: userCategory || aiResults.category,
       priority: aiResults.priority,
       sentiment: aiResults.sentiment,
+      trackingStatus: "registered",
+      trackingHistory: [
+        {
+          stage: "registered",
+          updatedAt: new Date(),
+          note: "Complaint submitted successfully.",
+        },
+      ],
       aiSuggestions: {
         suggestedCategory: aiResults.category,
         suggestedPriority: aiResults.priority,
@@ -65,8 +91,10 @@ exports.createComplaint = async (req, res, next) => {
       controlUnitService.queueForDispatch(complaint._id, complaint.priority);
     }
 
-    // Populate user details
-    await complaint.populate("userId", "name email");
+    // Populate user details (only if linked to a user)
+    if (complaint.userId) {
+      await complaint.populate("userId", "name email");
+    }
 
     res.status(201).json({
       success: true,
@@ -340,6 +368,12 @@ exports.customerConfirmResolved = async (req, res, next) => {
     ) {
       complaint.status = "resolved";
       complaint.resolvedAt = new Date();
+      complaint.trackingStatus = "resolved";
+      complaint.trackingHistory.push({
+        stage: "resolved",
+        updatedAt: new Date(),
+        note: "Complaint resolved after both authority and customer confirmation.",
+      });
       complaint.automationLog.push({
         action: "AUTO_CLOSED_DUAL_VERIFICATION",
         details:
@@ -357,6 +391,54 @@ exports.customerConfirmResolved = async (req, res, next) => {
           ? "Complaint successfully closed. Thank you!"
           : "Your confirmation has been recorded.",
       data: complaint,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Track complaints for logged-in user (auto-uses their email/phone)
+// @route   GET /api/complaints/track
+// @access  Private
+exports.trackComplaintByContact = async (req, res, next) => {
+  try {
+    const { pnrNumber, trainNumber, dateFrom, dateTo } = req.query;
+
+    const userEmail = req.user.email;
+    const userPhone = req.user.phone;
+
+    const orConditions = [];
+    if (userEmail) orConditions.push({ contactEmail: userEmail.toLowerCase() });
+    if (userPhone) orConditions.push({ contactMobile: userPhone.trim() });
+    orConditions.push({ userId: req.user._id });
+
+    const query = { $or: orConditions };
+    if (pnrNumber && pnrNumber.trim()) {
+      query.pnrNumber = pnrNumber.trim();
+    }
+    if (trainNumber && trainNumber.trim()) {
+      query.trainNumber = { $regex: trainNumber.trim(), $options: "i" };
+    }
+    if (dateFrom || dateTo) {
+      query.createdAt = {};
+      if (dateFrom) query.createdAt.$gte = new Date(dateFrom);
+      if (dateTo) {
+        const end = new Date(dateTo);
+        end.setHours(23, 59, 59, 999);
+        query.createdAt.$lte = end;
+      }
+    }
+
+    const complaints = await Complaint.find(query)
+      .sort({ createdAt: -1 })
+      .select(
+        "title description category priority status trackingStatus trackingHistory pnrNumber trainNumber contactMobile contactEmail createdAt resolvedAt assignedDepartment authorityMarkedDone authorityActionNotes customerMarkedDone",
+      );
+
+    res.status(200).json({
+      success: true,
+      count: complaints.length,
+      data: complaints,
     });
   } catch (error) {
     next(error);

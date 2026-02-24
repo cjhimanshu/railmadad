@@ -8,8 +8,9 @@ const {
   deleteComplaint,
   submitSatisfaction,
   customerConfirmResolved,
+  trackComplaintByContact,
 } = require("../controllers/complaint.controller");
-const { protect } = require("../middleware/auth.middleware");
+const { protect, optionalProtect } = require("../middleware/auth.middleware");
 const validate = require("../middleware/validation.middleware");
 const upload = require("../config/upload.config");
 
@@ -24,20 +25,29 @@ const complaintValidation = [
     .isLength({ max: 200 })
     .withMessage("Title cannot exceed 200 characters"),
   body("description")
+    .optional({ checkFalsy: true })
     .trim()
-    .notEmpty()
-    .withMessage("Description is required")
     .isLength({ max: 2000 })
     .withMessage("Description cannot exceed 2000 characters"),
 ];
 
-// Routes - all protected
+// ── Public: submit a complaint (no login needed) ───────────────────────
+router.post(
+  "/",
+  optionalProtect,
+  upload.single("image"),
+  complaintValidation,
+  validate,
+  createComplaint,
+);
+
+// ── Protected: track complaints (login required) ───────────────────────
+router.get("/track", protect, trackComplaintByContact);
+
+// ── Protected: all other complaint routes ─────────────────────────────
 router.use(protect);
 
-router
-  .route("/")
-  .get(getUserComplaints)
-  .post(upload.single("image"), complaintValidation, validate, createComplaint);
+router.get("/", getUserComplaints);
 
 router
   .route("/:id")

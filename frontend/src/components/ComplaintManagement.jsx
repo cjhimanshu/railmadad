@@ -29,6 +29,8 @@ import {
   FaHammer,
   FaQuestionCircle,
   FaRedo,
+  FaUserMinus,
+  FaMoneyBillWave,
 } from "react-icons/fa";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -36,7 +38,9 @@ const CATEGORIES = [
   { key: "all", label: "All", icon: FaFilter },
   { key: "cleanliness", label: "Cleanliness", icon: FaBroom },
   { key: "safety", label: "Safety", icon: FaShieldAlt },
-  { key: "staff_behavior", label: "Staff", icon: FaUserTie },
+  { key: "staff_behavior", label: "Staff Behavior", icon: FaUserTie },
+  { key: "staff_complaint", label: "Staff Complaint", icon: FaUserMinus },
+  { key: "overcharging", label: "Overcharging", icon: FaMoneyBillWave },
   { key: "facilities", label: "Facilities", icon: FaBuilding },
   { key: "ticketing", label: "Ticketing", icon: FaTicketAlt },
   { key: "punctuality", label: "Punctuality", icon: FaTrain },
@@ -700,59 +704,6 @@ const ComplaintManagement = ({ onUpdate, initialFilter }) => {
 
   return (
     <div className="space-y-5">
-      {/* Summary strip */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {[
-          {
-            label: "Total",
-            val: stats.total,
-            color: "bg-blue-50 text-blue-800 border-blue-200",
-            filterStatus: "",
-          },
-          {
-            label: "Pending",
-            val: stats.pending,
-            color: "bg-yellow-50 text-yellow-800 border-yellow-200",
-            filterStatus: "pending",
-          },
-          {
-            label: "Awaiting Customer",
-            val: stats.awaiting,
-            color: "bg-indigo-50 text-indigo-800 border-indigo-200",
-            filterStatus: "in_progress",
-          },
-          {
-            label: "Closure Blocked",
-            val: stats.blocked,
-            color: "bg-red-50 text-red-800 border-red-200",
-            filterStatus: "in_progress",
-          },
-          {
-            label: "Resolved",
-            val: stats.resolved,
-            color: "bg-green-50 text-green-800 border-green-200",
-            filterStatus: "resolved",
-          },
-        ].map((s) => (
-          <button
-            key={s.label}
-            onClick={() =>
-              setFilters((f) => ({
-                ...f,
-                status:
-                  f.status === s.filterStatus && s.filterStatus !== ""
-                    ? ""
-                    : s.filterStatus,
-              }))
-            }
-            className={`rounded-xl border p-3 text-center transition-all hover:shadow-md hover:scale-105 cursor-pointer w-full ${s.color} ${filters.status === s.filterStatus && s.filterStatus !== "" ? "ring-2 ring-offset-1 ring-current shadow-md" : ""}`}
-          >
-            <p className="text-2xl font-bold">{s.val}</p>
-            <p className="text-xs font-medium mt-0.5">{s.label}</p>
-          </button>
-        ))}
-      </div>
-
       {/* Category tabs */}
       {/* Category tabs */}
       <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-10 gap-2">

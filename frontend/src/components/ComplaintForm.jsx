@@ -1,6 +1,5 @@
 import { useState } from "react";
 import api from "../utils/api";
-import { toast } from "react-toastify";
 import {
   FaUpload,
   FaSpinner,
@@ -8,12 +7,14 @@ import {
   FaTicketAlt,
   FaPhone,
   FaEnvelope,
+  FaCheckCircle,
+  FaTag,
 } from "react-icons/fa";
 
 const ComplaintForm = ({ onSubmitSuccess }) => {
   const [formData, setFormData] = useState({
     title: "",
-    description: "",
+    category: "",
     pnrNumber: "",
     contactMobile: "",
     contactEmail: "",
@@ -22,6 +23,8 @@ const ComplaintForm = ({ onSubmitSuccess }) => {
   const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -42,11 +45,12 @@ const ComplaintForm = ({ onSubmitSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg("");
 
     try {
       const formDataToSend = new FormData();
       formDataToSend.append("title", formData.title);
-      formDataToSend.append("description", formData.description);
+      formDataToSend.append("category", formData.category);
       if (formData.pnrNumber.trim()) {
         formDataToSend.append("pnrNumber", formData.pnrNumber.trim());
       }
@@ -66,17 +70,16 @@ const ComplaintForm = ({ onSubmitSuccess }) => {
         },
       });
 
-      // Show AI suggestions
       const complaint = response.data.data;
+
       if (complaint.aiSuggestions) {
         setAiSuggestions(complaint.aiSuggestions);
-        toast.success("Complaint submitted! AI has analyzed your complaint.");
       }
 
       // Reset form
       setFormData({
         title: "",
-        description: "",
+        category: "",
         pnrNumber: "",
         contactMobile: "",
         contactEmail: "",
@@ -84,12 +87,20 @@ const ComplaintForm = ({ onSubmitSuccess }) => {
       setImage(null);
       setImagePreview(null);
 
-      // Call success callback
+      // Show inline success popup
+      setShowSuccess(true);
+
+      // Call success callback after short delay so popup is visible
       if (onSubmitSuccess) {
-        onSubmitSuccess();
+        setTimeout(() => onSubmitSuccess(complaint), 2500);
       }
     } catch (error) {
       console.error("Error submitting complaint:", error);
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.errors?.[0]?.message ||
+        "Something went wrong. Please try again.";
+      setErrorMsg(msg);
     } finally {
       setLoading(false);
     }
@@ -128,8 +139,8 @@ const ComplaintForm = ({ onSubmitSuccess }) => {
           </p>
         </div>
 
-        {/* PNR + Mobile + Email row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* PNR + Category row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* PNR Number */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -140,20 +151,54 @@ const ComplaintForm = ({ onSubmitSuccess }) => {
               type="text"
               name="pnrNumber"
               value={formData.pnrNumber}
-              onChange={handleChange}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                setFormData({ ...formData, pnrNumber: val });
+              }}
               className="input-field font-mono tracking-widest"
               placeholder="10-digit PNR"
               maxLength="10"
               required
-              onInput={(e) => {
-                e.target.value = e.target.value.replace(/\D/g, "");
-              }}
             />
             <p className="text-xs text-gray-400 mt-1">
               Enter your 10-digit PNR number
             </p>
           </div>
 
+          {/* Problem Section / Category */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <FaTag className="inline mr-1 text-purple-500" />
+              Select Category *
+            </label>
+            <select
+              name="category"
+              value={formData.category}
+              onChange={handleChange}
+              className="input-field bg-white"
+              required
+            >
+              <option value="">— Select a category —</option>
+              <option value="cleanliness">🧹 Cleanliness</option>
+              <option value="safety">🛡️ Safety</option>
+              <option value="staff_behavior">👤 Staff Behaviour</option>
+              <option value="staff_complaint">🗣️ Staff Complaint</option>
+              <option value="overcharging">💰 Overcharging</option>
+              <option value="facilities">🏠 Facilities</option>
+              <option value="ticketing">🎫 Ticketing</option>
+              <option value="punctuality">⏰ Punctuality</option>
+              <option value="food_quality">🍱 Food Quality</option>
+              <option value="infrastructure">🏗️ Infrastructure</option>
+              <option value="other">📋 Other</option>
+            </select>
+            <p className="text-xs text-gray-400 mt-1">
+              Choose the category that best matches your issue
+            </p>
+          </div>
+        </div>
+
+        {/* Mobile + Email row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Mobile Number */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -164,14 +209,14 @@ const ComplaintForm = ({ onSubmitSuccess }) => {
               type="tel"
               name="contactMobile"
               value={formData.contactMobile}
-              onChange={handleChange}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                setFormData({ ...formData, contactMobile: val });
+              }}
               className="input-field"
               placeholder="10-digit mobile no."
               maxLength="10"
               required
-              onInput={(e) => {
-                e.target.value = e.target.value.replace(/\D/g, "");
-              }}
             />
             <p className="text-xs text-gray-400 mt-1">
               For update notifications
@@ -199,26 +244,6 @@ const ComplaintForm = ({ onSubmitSuccess }) => {
               For update notifications
             </p>
           </div>
-        </div>
-
-        {/* Description */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Detailed Description *
-          </label>
-          <textarea
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            className="input-field"
-            rows="6"
-            placeholder="Provide detailed information about your complaint..."
-            maxLength="2000"
-            required
-          ></textarea>
-          <p className="text-xs text-gray-500 mt-1">
-            {formData.description.length}/2000 characters
-          </p>
         </div>
 
         {/* Image Upload */}
@@ -297,16 +322,32 @@ const ComplaintForm = ({ onSubmitSuccess }) => {
           </div>
         )}
 
+        {/* Error Message */}
+        {errorMsg && (
+          <div className="bg-red-50 border border-red-300 text-red-700 rounded-lg px-4 py-3 text-sm font-medium">
+            ⚠️ {errorMsg}
+          </div>
+        )}
+
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={loading}
-          className="btn-primary w-full flex items-center justify-center gap-2"
+          disabled={loading || showSuccess}
+          className={`w-full flex items-center justify-center gap-2 py-3 px-6 rounded-lg font-semibold text-white transition-all duration-500 ${
+            showSuccess
+              ? "bg-green-500 cursor-default scale-100"
+              : "btn-primary"
+          }`}
         >
           {loading ? (
             <>
               <FaSpinner className="animate-spin" />
               Submitting & Analyzing...
+            </>
+          ) : showSuccess ? (
+            <>
+              <FaCheckCircle className="text-white text-lg" />
+              Complaint Submitted Successfully!
             </>
           ) : (
             "Submit Complaint"

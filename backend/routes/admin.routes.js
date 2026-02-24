@@ -7,6 +7,7 @@ const {
   getDispatchLog,
   acknowledgeDispatch,
   markAuthorityDone,
+  bulkSendToAuthority,
 } = require("../controllers/admin.controller");
 const { protect, authorize } = require("../middleware/auth.middleware");
 
@@ -19,6 +20,7 @@ router.use(authorize("admin"));
 router.get("/complaints", getAllComplaints);
 router.put("/complaints/:id/status", updateComplaintStatus);
 router.put("/complaints/:id/mark-done", markAuthorityDone);
+router.post("/bulk-send-to-authority", bulkSendToAuthority);
 router.get("/analytics", getAnalytics);
 router.get("/stats", getStats);
 router.get("/dispatch-log", getDispatchLog);
