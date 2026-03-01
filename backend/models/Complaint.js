@@ -33,6 +33,7 @@ const complaintSchema = new mongoose.Schema(
         "punctuality",
         "food_quality",
         "infrastructure",
+        "seat_occupied_by_other",
         "other",
       ],
       default: "other",

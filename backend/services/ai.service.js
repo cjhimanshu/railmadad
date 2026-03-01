@@ -36,6 +36,7 @@ exports.categorizeComplaint = async (text) => {
       "punctuality",
       "food quality",
       "infrastructure",
+      "seat occupied by other",
       "other",
     ];
 

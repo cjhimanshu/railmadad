@@ -13,6 +13,7 @@ const CATEGORY_DEPARTMENT_MAP = {
   punctuality: "operations",
   food_quality: "catering",
   infrastructure: "technical",
+  seat_occupied_by_other: "security",
   other: "customer_service",
 };
 

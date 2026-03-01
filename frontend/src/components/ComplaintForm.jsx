@@ -189,6 +189,7 @@ const ComplaintForm = ({ onSubmitSuccess }) => {
               <option value="punctuality">⏰ Punctuality</option>
               <option value="food_quality">🍱 Food Quality</option>
               <option value="infrastructure">🏗️ Infrastructure</option>
+              <option value="seat_occupied_by_other">💺 Seat Occupied by Other</option>
               <option value="other">📋 Other</option>
             </select>
             <p className="text-xs text-gray-400 mt-1">
