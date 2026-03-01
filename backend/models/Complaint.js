@@ -173,18 +173,30 @@ const complaintSchema = new mongoose.Schema(
     // blocked = authority marked done but user gave low rating or rejected closure
     closureBlocked: { type: Boolean, default: false },
     closureBlockedReason: { type: String },
+
+    // ─── AI processing flag ───────────────────────────────────────────────────
+    // false until the background AI queue worker has finished processing
+    aiProcessed: { type: Boolean, default: false, index: true },
   },
   {
     timestamps: true,
   },
 );
 
-// Index for faster queries
+// ── Indexes ────────────────────────────────────────────────────────────────────
+// Single-field
 complaintSchema.index({ userId: 1, createdAt: -1 });
-complaintSchema.index({ status: 1 });
-complaintSchema.index({ category: 1 });
 complaintSchema.index({ pnrNumber: 1 });
 complaintSchema.index({ contactEmail: 1 });
 complaintSchema.index({ contactMobile: 1 });
+
+// Compound — cover the most common admin & cron query patterns
+complaintSchema.index({ status: 1, createdAt: -1 }); // admin list + cron
+complaintSchema.index({ status: 1, priority: 1 }); // urgent/high filter
+complaintSchema.index({ status: 1, priority: 1, createdAt: -1 }); // combined admin filter
+complaintSchema.index({ assignedDepartment: 1, status: 1 }); // department filter
+complaintSchema.index({ slaDeadline: 1, status: 1, escalatedAt: 1 }); // SLA escalation cron
+complaintSchema.index({ category: 1, status: 1 }); // category analytics
+complaintSchema.index({ trackingStatus: 1, createdAt: -1 }); // public tracking
 
 module.exports = mongoose.model("Complaint", complaintSchema);

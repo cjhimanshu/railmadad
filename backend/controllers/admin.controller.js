@@ -2,12 +2,19 @@ const Complaint = require("../models/Complaint");
 const User = require("../models/User");
 const ControlUnitDispatch = require("../models/ControlUnitDispatch");
 
-// @desc    Get all complaints (Admin only)
-// @route   GET /api/admin/complaints
+// ── Simple in-memory analytics cache ─────────────────────────────────────────────────
+const analyticsCache = { data: null, lastUpdated: 0, TTL: 5 * 60 * 1000 }; // 5-minute TTL
+const statsCache = { data: null, lastUpdated: 0, TTL: 60 * 1000 }; // 1-minute TTL
+
+// @desc    Get all complaints (Admin only) — paginated
+// @route   GET /api/admin/complaints?page=1&limit=50&status=&category=&priority=&department=
 // @access  Private/Admin
 exports.getAllComplaints = async (req, res, next) => {
   try {
     const { status, category, priority, department } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(200, parseInt(req.query.limit) || 50);
+    const skip = (page - 1) * limit;
 
     // Build filter object
     const filter = {};
@@ -16,13 +23,21 @@ exports.getAllComplaints = async (req, res, next) => {
     if (priority) filter.priority = priority;
     if (department) filter.assignedDepartment = department;
 
-    const complaints = await Complaint.find(filter)
-      .sort({ createdAt: -1 })
-      .populate("userId", "name email phone");
+    const [complaints, total] = await Promise.all([
+      Complaint.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("userId", "name email phone"),
+      Complaint.countDocuments(filter),
+    ]);
 
     res.status(200).json({
       success: true,
       count: complaints.length,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
       data: complaints,
     });
   } catch (error) {
@@ -188,127 +203,94 @@ exports.markAuthorityDone = async (req, res, next) => {
 // @access  Private/Admin
 exports.getAnalytics = async (req, res, next) => {
   try {
-    // Total complaints
-    const totalComplaints = await Complaint.countDocuments();
-
-    // Complaints by status
-    const complaintsByStatus = await Complaint.aggregate([
-      {
-        $group: {
-          _id: "$status",
-          count: { $sum: 1 },
-        },
-      },
-    ]);
-
-    // Complaints by category
-    const complaintsByCategory = await Complaint.aggregate([
-      {
-        $group: {
-          _id: "$category",
-          count: { $sum: 1 },
-        },
-      },
-    ]);
-
-    // Complaints by priority
-    const complaintsByPriority = await Complaint.aggregate([
-      {
-        $group: {
-          _id: "$priority",
-          count: { $sum: 1 },
-        },
-      },
-    ]);
-
-    // Complaints by sentiment
-    const complaintsBySentiment = await Complaint.aggregate([
-      {
-        $group: {
-          _id: "$sentiment",
-          count: { $sum: 1 },
-        },
-      },
-    ]);
-
-    // Recent complaints (last 7 days)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-    const recentComplaints = await Complaint.countDocuments({
-      createdAt: { $gte: sevenDaysAgo },
-    });
-
-    // Average resolution time (for resolved complaints)
-    const resolvedComplaints = await Complaint.find({
-      status: "resolved",
-      resolvedAt: { $exists: true },
-    });
-
-    let avgResolutionTime = 0;
-    if (resolvedComplaints.length > 0) {
-      const totalTime = resolvedComplaints.reduce((acc, complaint) => {
-        const resolutionTime =
-          new Date(complaint.resolvedAt) - new Date(complaint.createdAt);
-        return acc + resolutionTime;
-      }, 0);
-      avgResolutionTime = totalTime / resolvedComplaints.length;
-      // Convert to hours
-      avgResolutionTime = Math.round(avgResolutionTime / (1000 * 60 * 60));
+    // Serve from cache if fresh
+    if (
+      analyticsCache.data &&
+      Date.now() - analyticsCache.lastUpdated < analyticsCache.TTL
+    ) {
+      return res
+        .status(200)
+        .json({ success: true, cached: true, data: analyticsCache.data });
     }
 
-    // Complaints trend (last 30 days, grouped by day)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    const complaintsTrend = await Complaint.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: thirtyDaysAgo },
-        },
-      },
-      {
-        $group: {
-          _id: {
-            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+    // Run all heavy aggregations in parallel — single round-trip each
+    const [
+      totalComplaints,
+      complaintsByStatus,
+      complaintsByCategory,
+      complaintsByPriority,
+      complaintsBySentiment,
+      recentComplaints,
+      resolutionTimeAgg,
+      complaintsTrend,
+      totalUsers,
+    ] = await Promise.all([
+      Complaint.countDocuments(),
+
+      Complaint.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
+      Complaint.aggregate([
+        { $group: { _id: "$category", count: { $sum: 1 } } },
+      ]),
+      Complaint.aggregate([
+        { $group: { _id: "$priority", count: { $sum: 1 } } },
+      ]),
+      Complaint.aggregate([
+        { $group: { _id: "$sentiment", count: { $sum: 1 } } },
+      ]),
+
+      Complaint.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
+
+      // Avg resolution time via aggregate — no in-memory array loading
+      Complaint.aggregate([
+        { $match: { status: "resolved", resolvedAt: { $exists: true } } },
+        { $project: { diff: { $subtract: ["$resolvedAt", "$createdAt"] } } },
+        { $group: { _id: null, avgMs: { $avg: "$diff" } } },
+      ]),
+
+      Complaint.aggregate([
+        { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            count: { $sum: 1 },
           },
-          count: { $sum: 1 },
         },
-      },
-      {
-        $sort: { _id: 1 },
-      },
+        { $sort: { _id: 1 } },
+      ]),
+
+      User.countDocuments({ role: "user" }),
     ]);
 
-    // Total users
-    const totalUsers = await User.countDocuments({ role: "user" });
+    const avgResolutionTime = resolutionTimeAgg[0]
+      ? Math.round(resolutionTimeAgg[0].avgMs / (1000 * 60 * 60))
+      : 0;
 
-    res.status(200).json({
-      success: true,
-      data: {
-        totalComplaints,
-        totalUsers,
-        recentComplaints,
-        avgResolutionTimeHours: avgResolutionTime,
-        complaintsByStatus: complaintsByStatus.reduce((acc, item) => {
-          acc[item._id] = item.count;
-          return acc;
-        }, {}),
-        complaintsByCategory: complaintsByCategory.reduce((acc, item) => {
-          acc[item._id] = item.count;
-          return acc;
-        }, {}),
-        complaintsByPriority: complaintsByPriority.reduce((acc, item) => {
-          acc[item._id] = item.count;
-          return acc;
-        }, {}),
-        complaintsBySentiment: complaintsBySentiment.reduce((acc, item) => {
-          acc[item._id] = item.count;
-          return acc;
-        }, {}),
-        complaintsTrend,
-      },
-    });
+    const toMap = (arr) =>
+      arr.reduce((acc, item) => {
+        acc[item._id] = item.count;
+        return acc;
+      }, {});
+
+    const result = {
+      totalComplaints,
+      totalUsers,
+      recentComplaints,
+      avgResolutionTimeHours: avgResolutionTime,
+      complaintsByStatus: toMap(complaintsByStatus),
+      complaintsByCategory: toMap(complaintsByCategory),
+      complaintsByPriority: toMap(complaintsByPriority),
+      complaintsBySentiment: toMap(complaintsBySentiment),
+      complaintsTrend,
+    };
+
+    // Populate cache
+    analyticsCache.data = result;
+    analyticsCache.lastUpdated = Date.now();
+
+    res.status(200).json({ success: true, cached: false, data: result });
   } catch (error) {
     next(error);
   }
@@ -319,19 +301,32 @@ exports.getAnalytics = async (req, res, next) => {
 // @access  Private/Admin
 exports.getStats = async (req, res, next) => {
   try {
-    const stats = {
-      pending: await Complaint.countDocuments({ status: "pending" }),
-      inProgress: await Complaint.countDocuments({ status: "in_progress" }),
-      resolved: await Complaint.countDocuments({ status: "resolved" }),
-      rejected: await Complaint.countDocuments({ status: "rejected" }),
-      urgent: await Complaint.countDocuments({ priority: "urgent" }),
-      high: await Complaint.countDocuments({ priority: "high" }),
-    };
+    // Serve from cache if fresh
+    if (
+      statsCache.data &&
+      Date.now() - statsCache.lastUpdated < statsCache.TTL
+    ) {
+      return res
+        .status(200)
+        .json({ success: true, cached: true, data: statsCache.data });
+    }
 
-    res.status(200).json({
-      success: true,
-      data: stats,
-    });
+    // All 6 counts run in parallel — one connection round-trip each
+    const [pending, inProgress, resolved, rejected, urgent, high] =
+      await Promise.all([
+        Complaint.countDocuments({ status: "pending" }),
+        Complaint.countDocuments({ status: "in_progress" }),
+        Complaint.countDocuments({ status: "resolved" }),
+        Complaint.countDocuments({ status: "rejected" }),
+        Complaint.countDocuments({ priority: "urgent" }),
+        Complaint.countDocuments({ priority: "high" }),
+      ]);
+
+    const stats = { pending, inProgress, resolved, rejected, urgent, high };
+    statsCache.data = stats;
+    statsCache.lastUpdated = Date.now();
+
+    res.status(200).json({ success: true, data: stats });
   } catch (error) {
     next(error);
   }

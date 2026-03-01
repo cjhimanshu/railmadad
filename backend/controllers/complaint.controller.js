@@ -3,6 +3,7 @@ const { uploadToCloudinary } = require("../config/cloudinary.config");
 const aiService = require("../services/ai.service");
 const automationService = require("../services/automation.service");
 const controlUnitService = require("../services/controlUnit.service");
+const { enqueueAI } = require("../queues/ai.queue");
 
 // @desc    Create new complaint
 // @route   POST /api/complaints
@@ -28,13 +29,7 @@ exports.createComplaint = async (req, res, next) => {
       });
     }
 
-    // Process complaint with AI (use title only if description is empty)
-    const aiResults = await aiService.processComplaintWithAI(
-      title,
-      description || "",
-    );
-
-    // Prepare complaint data
+    // Prepare complaint data with safe defaults — AI will refine asynchronously
     const complaintData = {
       userId: req.user ? req.user.id : null,
       title,
@@ -46,10 +41,11 @@ exports.createComplaint = async (req, res, next) => {
         contactEmail && contactEmail.trim() !== ""
           ? contactEmail.trim().toLowerCase()
           : req.user?.email || null,
-      // Use user-selected category if provided, otherwise fall back to AI
-      category: userCategory || aiResults.category,
-      priority: aiResults.priority,
-      sentiment: aiResults.sentiment,
+      // Use user-selected category if provided; AI will refine if not
+      category: userCategory || "other",
+      priority: "medium",
+      sentiment: "neutral",
+      aiProcessed: false,
       trackingStatus: "registered",
       trackingHistory: [
         {
@@ -59,10 +55,10 @@ exports.createComplaint = async (req, res, next) => {
         },
       ],
       aiSuggestions: {
-        suggestedCategory: aiResults.category,
-        suggestedPriority: aiResults.priority,
-        suggestedResponse: aiResults.suggestedResponse,
-        confidence: aiResults.confidence.category,
+        suggestedCategory: null,
+        suggestedPriority: null,
+        suggestedResponse: null,
+        confidence: 0,
       },
     };
 
@@ -81,15 +77,12 @@ exports.createComplaint = async (req, res, next) => {
     // Create complaint
     const complaint = await Complaint.create(complaintData);
 
-    // Auto-assign department and SLA immediately
+    // Initial SLA assignment with default priority (AI will refine and re-assign)
     await automationService.assignDepartmentAndSLA(complaint);
 
-    // Dispatch to control unit based on priority
-    if (["urgent", "high"].includes(complaint.priority)) {
-      await controlUnitService.dispatchImmediate(complaint);
-    } else {
-      controlUnitService.queueForDispatch(complaint._id, complaint.priority);
-    }
+    // Enqueue AI processing — runs in background, does not block the response.
+    // The worker will update category/priority/sentiment and re-dispatch if needed.
+    await enqueueAI(complaint._id, title, description || "");
 
     // Populate user details (only if linked to a user)
     if (complaint.userId) {

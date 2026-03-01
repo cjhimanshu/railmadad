@@ -1,12 +1,33 @@
 require("dotenv").config();
+
+// ── Clustering: one worker per CPU in production ──────────────────────────────
+const cluster = require("cluster");
+const os = require("os");
+
+if (process.env.NODE_ENV === "production" && cluster.isPrimary) {
+  const numCPUs = parseInt(process.env.WEB_CONCURRENCY) || os.cpus().length;
+  console.log(`🖥️  Primary ${process.pid} → spawning ${numCPUs} workers`);
+  for (let i = 0; i < numCPUs; i++) cluster.fork();
+  cluster.on("exit", (worker, code, signal) => {
+    console.warn(
+      `⚠️  Worker ${worker.process.pid} died (${signal || code}) — restarting`,
+    );
+    cluster.fork();
+  });
+  return; // Primary only manages workers; workers run the actual server
+}
+
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
+const compression = require("compression");
+const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcryptjs");
 const connectDB = require("./config/db.config");
 const errorHandler = require("./middleware/error.middleware");
 const { startAutomation } = require("./services/automation.service");
 const { startControlUnit } = require("./services/controlUnit.service");
+const { initQueue } = require("./queues/ai.queue");
 
 // Seed the fixed admin account on startup
 async function seedAdmin() {
@@ -65,13 +86,18 @@ const app = express();
 connectDB().then(async () => {
   // Seed fixed admin account
   await seedAdmin();
-  // Start automation engine after DB is connected
-  startAutomation();
-  // Start control unit dispatcher
-  await startControlUnit();
+  // Start automation engine & control unit only on worker 1 (or in dev)
+  // This prevents N workers from each running cron jobs
+  if (!cluster.isWorker || cluster.worker.id === 1) {
+    startAutomation();
+    await startControlUnit();
+  }
+  // Initialise AI processing queue (connects to Redis if available)
+  await initQueue();
 });
 
 // Middleware
+app.use(compression()); // gzip all responses
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -87,9 +113,40 @@ app.use(
     credentials: true,
   }),
 );
-app.use(express.json());
+
+// Rate limiting
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many requests, please try again later.",
+  },
+});
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: {
+    success: false,
+    message: "Too many login attempts, please try again later.",
+  },
+});
+const complaintLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: {
+    success: false,
+    message:
+      "Complaint submission limit reached. Please wait before submitting again.",
+  },
+});
+
+app.use(generalLimiter);
+app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
-app.use(morgan("dev"));
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 
 // Routes
 app.get("/", (req, res) => {
@@ -101,8 +158,8 @@ app.get("/", (req, res) => {
   });
 });
 
-app.use("/api/auth", authRoutes);
-app.use("/api/complaints", complaintRoutes);
+app.use("/api/auth", authLimiter, authRoutes);
+app.use("/api/complaints", complaintLimiter, complaintRoutes);
 app.use("/api/admin", adminRoutes);
 
 // Error handler (must be last)
