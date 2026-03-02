@@ -21,6 +21,9 @@ import {
   FaLayerGroup,
   FaPaperPlane,
   FaSpinner,
+  FaShieldAlt,
+  FaSyncAlt,
+  FaTrain,
 } from "react-icons/fa";
 
 // ─── Priority colours ─────────────────────────────────────────────────────────
@@ -95,33 +98,19 @@ const ControlUnitPanel = () => {
     <div>
       {/* Live Queue Status */}
       <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="card bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 flex items-center gap-4">
-          <FaHourglass className="text-3xl text-yellow-500" />
-          <div>
-            <p className="text-xs text-yellow-700 font-semibold uppercase tracking-wide">
-              Medium Queue
-            </p>
-            <p className="text-3xl font-bold text-yellow-800">
-              {queueStatus.mediumQueue}
-            </p>
-            <p className="text-xs text-yellow-600">
-              dispatches pending (5-min batch)
-            </p>
-          </div>
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 p-5 text-white shadow-lg shadow-orange-200">
+          <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-white/10 blur-xl" />
+          <FaHourglass className="text-2xl mb-3 opacity-90" />
+          <p className="text-3xl font-extrabold leading-none">{queueStatus.mediumQueue}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide mt-1 opacity-80">Medium Queue</p>
+          <p className="text-xs opacity-60 mt-0.5">5-min batch pending</p>
         </div>
-        <div className="card bg-gradient-to-br from-green-50 to-green-100 border border-green-200 flex items-center gap-4">
-          <FaHourglass className="text-3xl text-green-500" />
-          <div>
-            <p className="text-xs text-green-700 font-semibold uppercase tracking-wide">
-              Low Queue
-            </p>
-            <p className="text-3xl font-bold text-green-800">
-              {queueStatus.lowQueue}
-            </p>
-            <p className="text-xs text-green-600">
-              dispatches pending (10-min batch)
-            </p>
-          </div>
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 p-5 text-white shadow-lg shadow-green-200">
+          <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-white/10 blur-xl" />
+          <FaHourglass className="text-2xl mb-3 opacity-90" />
+          <p className="text-3xl font-extrabold leading-none">{queueStatus.lowQueue}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide mt-1 opacity-80">Low Queue</p>
+          <p className="text-xs opacity-60 mt-0.5">10-min batch pending</p>
         </div>
       </div>
 
@@ -383,26 +372,46 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/60">
       <Navbar />
 
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8 animate-fade-in flex items-start justify-between">
-          <div>
-            <h1 className="text-4xl font-bold text-railway-dark mb-1">
-              Admin Dashboard
-            </h1>
-            <p className="text-gray-500">
-              Monitor complaints, track performance, dispatch actions
-            </p>
+        {/* ── Premium Header ── */}
+        <div className="mb-8 animate-fade-in">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 p-7 shadow-2xl">
+            {/* decorative blobs */}
+            <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-8 left-1/3 w-40 h-40 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
+
+            <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center shadow-inner border border-white/10">
+                  <FaShieldAlt className="text-2xl text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-semibold uppercase tracking-widest text-blue-300">RailMadad</span>
+                    <span className="w-1 h-1 rounded-full bg-blue-400" />
+                    <span className="text-xs text-blue-300/70">Admin Console</span>
+                  </div>
+                  <h1 className="text-3xl font-extrabold text-white tracking-tight">Command Dashboard</h1>
+                  <p className="text-sm text-slate-400 mt-0.5">Monitor complaints · Track performance · Dispatch actions</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="text-right hidden sm:block">
+                  <p className="text-xs text-slate-400">Last updated</p>
+                  <p className="text-sm font-semibold text-white">{new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
+                </div>
+                <button
+                  onClick={fetchData}
+                  className="flex items-center gap-2 text-sm bg-white/10 hover:bg-white/20 border border-white/10 text-white px-4 py-2 rounded-xl transition-all active:scale-95"
+                >
+                  <FaSyncAlt /> Refresh
+                </button>
+              </div>
+            </div>
           </div>
-          <button
-            onClick={fetchData}
-            className="flex items-center gap-2 text-sm bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-xl shadow-sm hover:bg-gray-50 transition-all"
-          >
-            ↻ Refresh
-          </button>
         </div>
 
         {/* ── BIG Stat Cards ── */}
@@ -500,63 +509,55 @@ const AdminDashboard = () => {
           })}
         </div>
 
-        {/* Total banner */}
-        <div className="mb-8 bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-4 flex flex-wrap items-center gap-6">
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">
-              Total Complaints
-            </p>
-            <p className="text-3xl font-bold text-gray-800">
-              {stats?.total || total}
-            </p>
+        {/* Total banner + Tab nav */}
+        <div className="mb-8 bg-white/80 backdrop-blur-sm rounded-2xl shadow-md border border-white/60 overflow-hidden">
+          {/* stats strip */}
+          <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center gap-6">
+            <div>
+              <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Total Complaints</p>
+              <p className="text-3xl font-bold text-gray-800">{stats?.total || total}</p>
+            </div>
+            <div className="h-10 w-px bg-gray-200 hidden sm:block" />
+            <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+              {STAT_CARDS.map((c) => (
+                <span key={c.label} className="flex items-center gap-1.5">
+                  <span className={`w-2.5 h-2.5 rounded-full ${c.bar}`} />
+                  {c.label}: <strong className="text-gray-700">{c.val}</strong>
+                </span>
+              ))}
+            </div>
           </div>
-          <div className="h-10 w-px bg-gray-200 hidden sm:block" />
-          <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-            {STAT_CARDS.map((c) => (
-              <span key={c.label} className="flex items-center gap-1.5">
-                <span className={`w-2.5 h-2.5 rounded-full ${c.bar}`} />
-                {c.label}: <strong className="text-gray-700">{c.val}</strong>
-              </span>
-            ))}
-          </div>
-          <div className="ml-auto flex flex-wrap gap-2">
+          {/* tab nav */}
+          <div className="px-4 py-3 flex flex-wrap gap-2">
             <button
-              onClick={() => {
-                setActiveTab("analytics");
-                setShowComplaints(false);
-                setActiveCardLabel(null);
-              }}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${activeTab === "analytics" && !showComplaints ? "bg-railway-blue text-white shadow" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+              onClick={() => { setActiveTab("analytics"); setShowComplaints(false); setActiveCardLabel(null); }}
+              className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
+                activeTab === "analytics" && !showComplaints
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-200"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
             >
-              <FaChartBar className="inline mr-1" /> Analytics
+              <FaChartBar /> Analytics
             </button>
             <button
-              onClick={() => {
-                setActiveTab("complaints");
-                setStatFilter({});
-                setActiveCardLabel("All");
-                setShowComplaints(true);
-                setTimeout(
-                  () =>
-                    document
-                      .getElementById("complaint-section")
-                      ?.scrollIntoView({ behavior: "smooth" }),
-                  100,
-                );
-              }}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${activeTab === "complaints" && showComplaints ? "bg-railway-blue text-white shadow" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+              onClick={() => { setActiveTab("complaints"); setStatFilter({}); setActiveCardLabel("All"); setShowComplaints(true); setTimeout(() => document.getElementById("complaint-section")?.scrollIntoView({ behavior: "smooth" }), 100); }}
+              className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
+                activeTab === "complaints" && showComplaints
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-200"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
             >
-              <FaList className="inline mr-1" /> All Complaints
+              <FaList /> All Complaints
             </button>
             <button
-              onClick={() => {
-                setActiveTab("controlUnit");
-                setShowComplaints(false);
-                setActiveCardLabel(null);
-              }}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${activeTab === "controlUnit" ? "bg-red-600 text-white shadow" : "bg-gray-100 text-red-600 hover:bg-red-50"}`}
+              onClick={() => { setActiveTab("controlUnit"); setShowComplaints(false); setActiveCardLabel(null); }}
+              className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
+                activeTab === "controlUnit"
+                  ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-md shadow-red-200"
+                  : "bg-gray-100 text-red-600 hover:bg-red-50"
+              }`}
             >
-              <FaSatelliteDish className="inline mr-1" /> Control Unit
+              <FaSatelliteDish /> Control Unit
             </button>
           </div>
         </div>
