@@ -41,16 +41,27 @@ const Login = () => {
       login(user, token);
       toast.success("Login successful!");
 
-      // Redirect based on role or return destination
-      if (user.role === "admin") {
-        navigate("/admin");
-      } else if (returnTo && returnTo !== "/login" && returnTo !== "/") {
+      if (returnTo && returnTo !== "/login" && returnTo !== "/") {
         navigate(returnTo);
       } else {
         navigate("/track");
       }
     } catch (error) {
       console.error("Login error:", error);
+      const msg =
+        error.response?.data?.message || "Login failed. Please try again.";
+
+      // Admin accounts are blocked from this page — redirect them
+      if (
+        error.response?.status === 403 &&
+        msg.toLowerCase().includes("admin")
+      ) {
+        toast.error("Admin accounts must use the Admin Login page.");
+        navigate("/admin-login");
+        return;
+      }
+
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

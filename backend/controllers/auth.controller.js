@@ -108,6 +108,14 @@ exports.login = async (req, res, next) => {
       });
     }
 
+    // Block admin accounts from using the regular login endpoint
+    if (user.role === "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Admin accounts must use the Admin Login page.",
+      });
+    }
+
     // Generate token
     const token = generateToken(user._id);
 
