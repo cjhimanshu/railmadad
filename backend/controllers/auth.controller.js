@@ -3,6 +3,8 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const { Resend } = require("resend");
 const User = require("../models/User");
+const Complaint = require("../models/Complaint");
+const OtpModel = require("../models/Otp");
 
 // ─── Email helper (Resend — API-key only, no SMTP credentials) ───────────────
 const sendEmail = async ({ email, subject, html }) => {
@@ -385,6 +387,179 @@ exports.resetPassword = async (req, res, next) => {
       success: true,
       message:
         "Password reset successful. You can now log in with your new password.",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── SMS helper (Twilio) ──────────────────────────────────────────────────────
+// If TWILIO_* env vars are not set, OTP is printed to the server console
+// so you can test locally without an SMS provider.
+const sendSms = async (mobile, message) => {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken  = process.env.TWILIO_AUTH_TOKEN;
+  const from       = process.env.TWILIO_PHONE_NUMBER;
+
+  if (!accountSid || !authToken || !from) {
+    // ── Dev/test fallback: print OTP to terminal ──────────────────────────────
+    console.log("\n┌─────────────────────────────────────────────────┐");
+    console.log("│         📱  OTP LOGIN  (SMS not configured)      │");
+    console.log(`│  Mobile : ${mobile.padEnd(38)}│`);
+    console.log(`│  Message: ${message.substring(0, 38).padEnd(38)}│`);
+    console.log("└─────────────────────────────────────────────────┘\n");
+    return;
+  }
+
+  // Twilio — add TWILIO_* vars to .env to enable real SMS
+  // npm install twilio  (already added to package.json)
+  const twilio = require("twilio")(accountSid, authToken);
+  await twilio.messages.create({
+    body: message,
+    from,
+    to: `+91${mobile}`, // India (+91) — adjust if needed
+  });
+};
+
+// @desc    Send OTP to mobile number (must have filed a complaint with that mobile)
+// @route   POST /api/auth/send-otp
+// @access  Public
+exports.sendOtp = async (req, res, next) => {
+  try {
+    const { mobile } = req.body;
+
+    if (!mobile || !/^\d{10}$/.test(mobile.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid 10-digit mobile number",
+      });
+    }
+
+    const cleanMobile = mobile.trim();
+
+    // Check if any complaint was filed with this mobile number
+    const complaint = await Complaint.findOne({ contactMobile: cleanMobile });
+    if (!complaint) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "No complaint found with this mobile number. Please file a complaint first to use OTP login.",
+      });
+    }
+
+    // Generate 6-digit OTP
+    const otp     = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
+
+    // Remove old OTPs for this mobile and save the new one (5-min expiry)
+    await OtpModel.deleteMany({ mobile: cleanMobile });
+    await OtpModel.create({
+      mobile:    cleanMobile,
+      otpHash,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+    });
+
+    await sendSms(
+      cleanMobile,
+      `Your RailMadad OTP is: ${otp}. Valid for 5 minutes. Do not share with anyone.`
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "OTP sent to your mobile number",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Verify OTP and log in (auto-creates account if new mobile)
+// @route   POST /api/auth/verify-otp
+// @access  Public
+exports.verifyOtp = async (req, res, next) => {
+  try {
+    const { mobile, otp } = req.body;
+
+    if (!mobile || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Mobile number and OTP are required",
+      });
+    }
+
+    const cleanMobile = mobile.trim();
+
+    // Find a valid (non-expired) OTP record
+    const otpRecord = await OtpModel.findOne({
+      mobile:    cleanMobile,
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (!otpRecord) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP has expired. Please request a new one.",
+      });
+    }
+
+    const otpHash = crypto.createHash("sha256").update(otp.trim()).digest("hex");
+    if (otpHash !== otpRecord.otpHash) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP. Please try again.",
+      });
+    }
+
+    // Valid OTP — delete it immediately (one-time use)
+    await OtpModel.deleteMany({ mobile: cleanMobile });
+
+    // Find or auto-create the user account linked to this mobile
+    let user = await User.findOne({ phone: cleanMobile });
+
+    if (!user) {
+      // Grab the most recent complaint to get a name / contact email
+      const latestComplaint = await Complaint.findOne({ contactMobile: cleanMobile })
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const salt          = await bcrypt.genSalt(10);
+      const randomPasswd  = await bcrypt.hash(
+        crypto.randomBytes(32).toString("hex"),
+        salt
+      );
+
+      user = await User.create({
+        name:      `User-${cleanMobile.slice(-4)}`, // e.g. "User-4567"
+        email:     `${cleanMobile}@otp.railmadad.local`, // internal placeholder
+        password:  randomPasswd,
+        phone:     cleanMobile,
+        isOtpUser: true,
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(401).json({
+        success: false,
+        message: "Your account has been deactivated",
+      });
+    }
+
+    const token = generateToken(user._id);
+
+    res.status(200).json({
+      success: true,
+      message: "OTP verified. Logged in successfully.",
+      data: {
+        user: {
+          id:        user._id,
+          name:      user.name,
+          email:     user.email,
+          role:      user.role,
+          phone:     user.phone,
+          isOtpUser: user.isOtpUser,
+        },
+        token,
+      },
     });
   } catch (error) {
     next(error);

@@ -33,6 +33,12 @@ const userSchema = new mongoose.Schema(
     phone: {
       type: String,
       trim: true,
+      unique: true,
+      sparse: true, // allows multiple null — only enforces uniqueness on non-null values
+    },
+    isOtpUser: {
+      type: Boolean,
+      default: false, // true for accounts auto-created via OTP login
     },
     isActive: {
       type: Boolean,
