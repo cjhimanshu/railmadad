@@ -331,12 +331,10 @@ exports.forgotPassword = async (req, res, next) => {
         subject: "RailMadad — Password Reset Link",
         html,
       });
-      res
-        .status(200)
-        .json({
-          success: true,
-          message: "Password reset link sent to your email",
-        });
+      res.status(200).json({
+        success: true,
+        message: "Password reset link sent to your email",
+      });
     } catch (emailErr) {
       user.resetPasswordToken = undefined;
       user.resetPasswordExpire = undefined;
@@ -355,12 +353,10 @@ exports.resetPassword = async (req, res, next) => {
   try {
     const { password } = req.body;
     if (!password || password.length < 6) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Password must be at least 6 characters",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters",
+      });
     }
     const hashedToken = crypto
       .createHash("sha256")
@@ -371,12 +367,10 @@ exports.resetPassword = async (req, res, next) => {
       resetPasswordExpire: { $gt: Date.now() },
     });
     if (!user) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Reset link is invalid or has expired",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Reset link is invalid or has expired",
+      });
     }
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(password, salt);
@@ -396,29 +390,18 @@ exports.resetPassword = async (req, res, next) => {
 // ─── SMS helper (Twilio) ──────────────────────────────────────────────────────
 // If TWILIO_* env vars are not set, OTP is printed to the server console
 // so you can test locally without an SMS provider.
-const sendSms = async (mobile, message) => {
+// Returns a Twilio Verify client (throws if env vars missing)
+const getTwilioVerify = () => {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken  = process.env.TWILIO_AUTH_TOKEN;
-  const from       = process.env.TWILIO_PHONE_NUMBER;
-
-  if (!accountSid || !authToken || !from) {
-    // ── Dev/test fallback: print OTP to terminal ──────────────────────────────
-    console.log("\n┌─────────────────────────────────────────────────┐");
-    console.log("│         📱  OTP LOGIN  (SMS not configured)      │");
-    console.log(`│  Mobile : ${mobile.padEnd(38)}│`);
-    console.log(`│  Message: ${message.substring(0, 38).padEnd(38)}│`);
-    console.log("└─────────────────────────────────────────────────┘\n");
-    return;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
+  if (!accountSid || !authToken || !serviceSid) {
+    throw new Error(
+      "Twilio Verify is not configured. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_VERIFY_SERVICE_SID to your .env",
+    );
   }
-
-  // Twilio — add TWILIO_* vars to .env to enable real SMS
-  // npm install twilio  (already added to package.json)
-  const twilio = require("twilio")(accountSid, authToken);
-  await twilio.messages.create({
-    body: message,
-    from,
-    to: `+91${mobile}`, // India (+91) — adjust if needed
-  });
+  const client = require("twilio")(accountSid, authToken);
+  return client.verify.v2.services(serviceSid);
 };
 
 // @desc    Send OTP to mobile number (must have filed a complaint with that mobile)
@@ -437,32 +420,12 @@ exports.sendOtp = async (req, res, next) => {
 
     const cleanMobile = mobile.trim();
 
-    // Check if any complaint was filed with this mobile number
-    const complaint = await Complaint.findOne({ contactMobile: cleanMobile });
-    if (!complaint) {
-      return res.status(404).json({
-        success: false,
-        message:
-          "No complaint found with this mobile number. Please file a complaint first to use OTP login.",
-      });
-    }
-
-    // Generate 6-digit OTP
-    const otp     = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
-
-    // Remove old OTPs for this mobile and save the new one (5-min expiry)
-    await OtpModel.deleteMany({ mobile: cleanMobile });
-    await OtpModel.create({
-      mobile:    cleanMobile,
-      otpHash,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+    // Send OTP via Twilio Verify
+    const verifyService = getTwilioVerify();
+    await verifyService.verifications.create({
+      to: `+91${cleanMobile}`,
+      channel: "sms",
     });
-
-    await sendSms(
-      cleanMobile,
-      `Your RailMadad OTP is: ${otp}. Valid for 5 minutes. Do not share with anyone.`
-    );
 
     res.status(200).json({
       success: true,
@@ -489,50 +452,42 @@ exports.verifyOtp = async (req, res, next) => {
 
     const cleanMobile = mobile.trim();
 
-    // Find a valid (non-expired) OTP record
-    const otpRecord = await OtpModel.findOne({
-      mobile:    cleanMobile,
-      expiresAt: { $gt: new Date() },
+    // Verify OTP via Twilio Verify
+    const verifyService = getTwilioVerify();
+    const check = await verifyService.verificationChecks.create({
+      to: `+91${cleanMobile}`,
+      code: otp.trim(),
     });
 
-    if (!otpRecord) {
+    if (check.status !== "approved") {
       return res.status(400).json({
         success: false,
-        message: "OTP has expired. Please request a new one.",
+        message: "Invalid or expired OTP. Please try again.",
       });
     }
-
-    const otpHash = crypto.createHash("sha256").update(otp.trim()).digest("hex");
-    if (otpHash !== otpRecord.otpHash) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid OTP. Please try again.",
-      });
-    }
-
-    // Valid OTP — delete it immediately (one-time use)
-    await OtpModel.deleteMany({ mobile: cleanMobile });
 
     // Find or auto-create the user account linked to this mobile
     let user = await User.findOne({ phone: cleanMobile });
 
     if (!user) {
       // Grab the most recent complaint to get a name / contact email
-      const latestComplaint = await Complaint.findOne({ contactMobile: cleanMobile })
+      const latestComplaint = await Complaint.findOne({
+        contactMobile: cleanMobile,
+      })
         .sort({ createdAt: -1 })
         .lean();
 
-      const salt          = await bcrypt.genSalt(10);
-      const randomPasswd  = await bcrypt.hash(
+      const salt = await bcrypt.genSalt(10);
+      const randomPasswd = await bcrypt.hash(
         crypto.randomBytes(32).toString("hex"),
-        salt
+        salt,
       );
 
       user = await User.create({
-        name:      `User-${cleanMobile.slice(-4)}`, // e.g. "User-4567"
-        email:     `${cleanMobile}@otp.railmadad.local`, // internal placeholder
-        password:  randomPasswd,
-        phone:     cleanMobile,
+        name: `User-${cleanMobile.slice(-4)}`, // e.g. "User-4567"
+        email: `${cleanMobile}@otp.railmadad.local`, // internal placeholder
+        password: randomPasswd,
+        phone: cleanMobile,
         isOtpUser: true,
       });
     }
@@ -551,11 +506,11 @@ exports.verifyOtp = async (req, res, next) => {
       message: "OTP verified. Logged in successfully.",
       data: {
         user: {
-          id:        user._id,
-          name:      user.name,
-          email:     user.email,
-          role:      user.role,
-          phone:     user.phone,
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          phone: user.phone,
           isOtpUser: user.isOtpUser,
         },
         token,
