@@ -35,11 +35,13 @@ const Login = () => {
   const { login } = useAuth();
   const returnTo  = location.state?.from || null;
 
-  const goToAfterLogin = () => {
+  const goToAfterLogin = (role) => {
     if (returnTo && returnTo !== "/login" && returnTo !== "/") {
       navigate(returnTo);
+    } else if (role === "admin") {
+      navigate("/admin");
     } else {
-      navigate("/track");
+      navigate("/dashboard");
     }
   };
 
@@ -52,7 +54,7 @@ const Login = () => {
       const { user, token } = response.data.data;
       login(user, token);
       toast.success("Login successful!");
-      goToAfterLogin();
+      goToAfterLogin(user.role);
     } catch (error) {
       const msg =
         error.response?.data?.message || "Login failed. Please try again.";
@@ -111,7 +113,7 @@ const Login = () => {
       const { user, token } = response.data.data;
       login(user, token);
       toast.success("OTP verified! Logged in successfully.");
-      goToAfterLogin();
+      goToAfterLogin(user.role);
     } catch (error) {
       const msg =
         error.response?.data?.message || "OTP verification failed. Please try again.";
