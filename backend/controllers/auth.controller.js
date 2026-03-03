@@ -454,15 +454,24 @@ exports.verifyOtp = async (req, res, next) => {
 
     // Verify OTP via Twilio Verify
     const verifyService = getTwilioVerify();
-    const check = await verifyService.verificationChecks.create({
-      to: `+91${cleanMobile}`,
-      code: otp.trim(),
-    });
+    let check;
+    try {
+      check = await verifyService.verificationChecks.create({
+        to:   `+91${cleanMobile}`,
+        code: otp.trim(),
+      });
+    } catch (twilioErr) {
+      // Twilio throws 404 when OTP is expired, already used, or never sent
+      return res.status(400).json({
+        success: false,
+        message: "OTP has expired or is invalid. Please request a new one.",
+      });
+    }
 
     if (check.status !== "approved") {
       return res.status(400).json({
         success: false,
-        message: "Invalid or expired OTP. Please try again.",
+        message: "Invalid OTP. Please try again.",
       });
     }
 
