@@ -24,16 +24,16 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   // ── OTP login state ─────────────────────────────────────────────────────────
-  const [otpMobile, setOtpMobile]     = useState("");
-  const [otpCode, setOtpCode]         = useState("");
-  const [otpStep, setOtpStep]         = useState(1); // 1 = enter mobile, 2 = enter OTP
-  const [otpLoading, setOtpLoading]   = useState(false);
+  const [otpMobile, setOtpMobile] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpStep, setOtpStep] = useState(1); // 1 = enter mobile, 2 = enter OTP
+  const [otpLoading, setOtpLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
 
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
-  const returnTo  = location.state?.from || null;
+  const returnTo = location.state?.from || null;
 
   const goToAfterLogin = (role) => {
     if (returnTo && returnTo !== "/login" && returnTo !== "/") {
@@ -58,7 +58,10 @@ const Login = () => {
     } catch (error) {
       const msg =
         error.response?.data?.message || "Login failed. Please try again.";
-      if (error.response?.status === 403 && msg.toLowerCase().includes("admin")) {
+      if (
+        error.response?.status === 403 &&
+        msg.toLowerCase().includes("admin")
+      ) {
         toast.error("Admin accounts must use the Admin Login page.");
         navigate("/admin-login");
         return;
@@ -84,13 +87,17 @@ const Login = () => {
       setResendTimer(30);
       const interval = setInterval(() => {
         setResendTimer((t) => {
-          if (t <= 1) { clearInterval(interval); return 0; }
+          if (t <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
           return t - 1;
         });
       }, 1000);
     } catch (error) {
       const msg =
-        error.response?.data?.message || "Failed to send OTP. Please try again.";
+        error.response?.data?.message ||
+        "Failed to send OTP. Please try again.";
       toast.error(msg);
     } finally {
       setOtpLoading(false);
@@ -108,7 +115,7 @@ const Login = () => {
     try {
       const response = await api.post("/auth/verify-otp", {
         mobile: otpMobile.trim(),
-        otp:    otpCode.trim(),
+        otp: otpCode.trim(),
       });
       const { user, token } = response.data.data;
       login(user, token);
@@ -116,7 +123,8 @@ const Login = () => {
       goToAfterLogin(user.role);
     } catch (error) {
       const msg =
-        error.response?.data?.message || "OTP verification failed. Please try again.";
+        error.response?.data?.message ||
+        "OTP verification failed. Please try again.";
       toast.error(msg);
     } finally {
       setOtpLoading(false);
@@ -126,7 +134,6 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12">
       <div className="max-w-md w-full">
-
         {/* ── Header ─────────────────────────────────────────────────────────── */}
         <div className="text-center mb-8 animate-fade-in">
           <div className="flex justify-center mb-4">
@@ -153,7 +160,9 @@ const Login = () => {
                     <p className="text-sm font-extrabold text-gray-800 leading-snug">
                       File a Railway Complaint
                     </p>
-                    <p className="text-xs text-gray-500 mt-0.5">Quick · Instant</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Quick · Instant
+                    </p>
                   </div>
                 </div>
                 <Link
@@ -177,7 +186,11 @@ const Login = () => {
           <div className="flex rounded-xl bg-gray-100 p-1 mb-6">
             <button
               type="button"
-              onClick={() => { setActiveTab("password"); setOtpStep(1); setOtpCode(""); }}
+              onClick={() => {
+                setActiveTab("password");
+                setOtpStep(1);
+                setOtpCode("");
+              }}
               className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-all ${
                 activeTab === "password"
                   ? "bg-white text-railway-blue shadow"
@@ -189,7 +202,11 @@ const Login = () => {
             </button>
             <button
               type="button"
-              onClick={() => { setActiveTab("otp"); setOtpStep(1); setOtpCode(""); }}
+              onClick={() => {
+                setActiveTab("otp");
+                setOtpStep(1);
+                setOtpCode("");
+              }}
               className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-all ${
                 activeTab === "otp"
                   ? "bg-white text-green-600 shadow"
@@ -216,7 +233,9 @@ const Login = () => {
                     type="email"
                     name="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
                     className="input-field pl-10"
                     placeholder="your@email.com"
                     required
@@ -242,7 +261,9 @@ const Login = () => {
                     type="password"
                     name="password"
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
                     className="input-field pl-10"
                     placeholder="••••••••"
                     required
@@ -250,7 +271,11 @@ const Login = () => {
                 </div>
               </div>
 
-              <button type="submit" disabled={loading} className="btn-primary w-full">
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary w-full"
+              >
                 {loading ? "Logging in..." : "Login & Track My Complaint"}
               </button>
             </form>
@@ -263,13 +288,25 @@ const Login = () => {
             <div className="space-y-5">
               {/* Step indicators */}
               <div className="flex items-center gap-2 text-xs mb-2">
-                <div className={`flex items-center gap-1.5 font-semibold ${otpStep === 1 ? "text-green-600" : "text-gray-400"}`}>
-                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs ${otpStep === 1 ? "bg-green-500" : "bg-gray-300"}`}>1</span>
+                <div
+                  className={`flex items-center gap-1.5 font-semibold ${otpStep === 1 ? "text-green-600" : "text-gray-400"}`}
+                >
+                  <span
+                    className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs ${otpStep === 1 ? "bg-green-500" : "bg-gray-300"}`}
+                  >
+                    1
+                  </span>
                   Enter Mobile
                 </div>
                 <div className="flex-1 border-t border-dashed border-gray-300" />
-                <div className={`flex items-center gap-1.5 font-semibold ${otpStep === 2 ? "text-green-600" : "text-gray-400"}`}>
-                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs ${otpStep === 2 ? "bg-green-500" : "bg-gray-300"}`}>2</span>
+                <div
+                  className={`flex items-center gap-1.5 font-semibold ${otpStep === 2 ? "text-green-600" : "text-gray-400"}`}
+                >
+                  <span
+                    className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs ${otpStep === 2 ? "bg-green-500" : "bg-gray-300"}`}
+                  >
+                    2
+                  </span>
                   Enter OTP
                 </div>
               </div>
@@ -289,7 +326,9 @@ const Login = () => {
                         type="tel"
                         value={otpMobile}
                         onChange={(e) =>
-                          setOtpMobile(e.target.value.replace(/\D/g, "").slice(0, 10))
+                          setOtpMobile(
+                            e.target.value.replace(/\D/g, "").slice(0, 10),
+                          )
                         }
                         className="input-field pl-12 font-mono tracking-widest"
                         placeholder="10-digit mobile"
@@ -308,9 +347,13 @@ const Login = () => {
                     className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white font-bold py-3 px-4 rounded-xl transition-all"
                   >
                     {otpLoading ? (
-                      <><FaSpinner className="animate-spin" /> Sending OTP…</>
+                      <>
+                        <FaSpinner className="animate-spin" /> Sending OTP…
+                      </>
                     ) : (
-                      <><FaMobileAlt /> Send OTP</>
+                      <>
+                        <FaMobileAlt /> Send OTP
+                      </>
                     )}
                   </button>
                 </form>
@@ -321,7 +364,9 @@ const Login = () => {
                 <form onSubmit={handleVerifyOtp} className="space-y-4">
                   <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-start gap-2">
                     <FaMobileAlt className="mt-0.5 flex-shrink-0" />
-                    <span>OTP sent to <strong>+91 {otpMobile}</strong></span>
+                    <span>
+                      OTP sent to <strong>+91 {otpMobile}</strong>
+                    </span>
                   </div>
 
                   <div>
@@ -334,7 +379,9 @@ const Login = () => {
                         type="tel"
                         value={otpCode}
                         onChange={(e) =>
-                          setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                          setOtpCode(
+                            e.target.value.replace(/\D/g, "").slice(0, 6),
+                          )
                         }
                         className="input-field pl-10 font-mono tracking-[0.4em] text-xl text-center"
                         placeholder="• • • • • •"
@@ -351,7 +398,9 @@ const Login = () => {
                     className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white font-bold py-3 px-4 rounded-xl transition-all"
                   >
                     {otpLoading ? (
-                      <><FaSpinner className="animate-spin" /> Verifying…</>
+                      <>
+                        <FaSpinner className="animate-spin" /> Verifying…
+                      </>
                     ) : (
                       "Verify OTP & Login"
                     )}
@@ -360,7 +409,10 @@ const Login = () => {
                   <div className="flex items-center justify-between text-xs text-gray-500 pt-1">
                     <button
                       type="button"
-                      onClick={() => { setOtpStep(1); setOtpCode(""); }}
+                      onClick={() => {
+                        setOtpStep(1);
+                        setOtpCode("");
+                      }}
                       className="hover:text-railway-blue hover:underline"
                     >
                       ← Change number
@@ -386,7 +438,10 @@ const Login = () => {
           {/* ── Register & Admin links ──────────────────────────────────────── */}
           <p className="mt-6 text-center text-gray-600">
             Don't have an account?{" "}
-            <Link to="/register" className="text-railway-blue font-semibold hover:underline">
+            <Link
+              to="/register"
+              className="text-railway-blue font-semibold hover:underline"
+            >
               Register here
             </Link>
           </p>
@@ -404,9 +459,15 @@ const Login = () => {
 
         {/* ── Demo Credentials ────────────────────────────────────────────────── */}
         <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-sm font-semibold text-blue-800 mb-2">Demo Credentials:</p>
-          <p className="text-xs text-blue-700">User: user@test.com / password123</p>
-          <p className="text-xs text-blue-700">Admin: admin@test.com / password123</p>
+          <p className="text-sm font-semibold text-blue-800 mb-2">
+            Demo Credentials:
+          </p>
+          <p className="text-xs text-blue-700">
+            User: user@test.com / password123
+          </p>
+          <p className="text-xs text-blue-700">
+            Admin: admin@test.com / password123
+          </p>
         </div>
       </div>
     </div>

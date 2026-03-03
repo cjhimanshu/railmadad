@@ -457,7 +457,7 @@ exports.verifyOtp = async (req, res, next) => {
     let check;
     try {
       check = await verifyService.verificationChecks.create({
-        to:   `+91${cleanMobile}`,
+        to: `+91${cleanMobile}`,
         code: otp.trim(),
       });
     } catch (twilioErr) {
