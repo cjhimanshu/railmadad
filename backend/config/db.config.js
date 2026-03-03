@@ -2,7 +2,8 @@ const mongoose = require("mongoose");
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+    const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    const conn = await mongoose.connect(uri, {
       maxPoolSize: 100, // max simultaneous connections (default was 5)
       minPoolSize: 10, // keep at least 10 connections warm
       serverSelectionTimeoutMS: 5000,

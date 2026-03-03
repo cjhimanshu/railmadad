@@ -6,6 +6,8 @@ const {
   adminLogin,
   adminRegister,
   getMe,
+  forgotPassword,
+  resetPassword,
 } = require("../controllers/auth.controller");
 const { protect } = require("../middleware/auth.middleware");
 const validate = require("../middleware/validation.middleware");
@@ -46,5 +48,7 @@ router.post(
   adminRegister,
 );
 router.get("/me", protect, getMe);
+router.post("/forgot-password", forgotPassword);
+router.put("/reset-password/:token", resetPassword);
 
 module.exports = router;
