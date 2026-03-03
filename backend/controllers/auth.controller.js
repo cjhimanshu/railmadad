@@ -285,17 +285,23 @@ exports.forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
     if (!email) {
-      return res.status(400).json({ success: false, message: "Please provide your email address" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Please provide your email address" });
     }
     const user = await User.findOne({ email: email.trim().toLowerCase() });
     if (!user) {
       return res.status(200).json({
         success: true,
-        message: "If an account with that email exists, a reset link has been sent.",
+        message:
+          "If an account with that email exists, a reset link has been sent.",
       });
     }
     const resetToken = crypto.randomBytes(32).toString("hex");
-    user.resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+    user.resetPasswordToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
     user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
     await user.save({ validateBeforeSave: false });
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
@@ -318,8 +324,17 @@ exports.forgotPassword = async (req, res, next) => {
         </div>
       </div>`;
     try {
-      await sendEmail({ email: user.email, subject: "RailMadad — Password Reset Link", html });
-      res.status(200).json({ success: true, message: "Password reset link sent to your email" });
+      await sendEmail({
+        email: user.email,
+        subject: "RailMadad — Password Reset Link",
+        html,
+      });
+      res
+        .status(200)
+        .json({
+          success: true,
+          message: "Password reset link sent to your email",
+        });
     } catch (emailErr) {
       user.resetPasswordToken = undefined;
       user.resetPasswordExpire = undefined;
@@ -338,15 +353,28 @@ exports.resetPassword = async (req, res, next) => {
   try {
     const { password } = req.body;
     if (!password || password.length < 6) {
-      return res.status(400).json({ success: false, message: "Password must be at least 6 characters" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Password must be at least 6 characters",
+        });
     }
-    const hashedToken = crypto.createHash("sha256").update(req.params.token).digest("hex");
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(req.params.token)
+      .digest("hex");
     const user = await User.findOne({
       resetPasswordToken: hashedToken,
       resetPasswordExpire: { $gt: Date.now() },
     });
     if (!user) {
-      return res.status(400).json({ success: false, message: "Reset link is invalid or has expired" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Reset link is invalid or has expired",
+        });
     }
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(password, salt);
@@ -355,7 +383,8 @@ exports.resetPassword = async (req, res, next) => {
     await user.save();
     res.status(200).json({
       success: true,
-      message: "Password reset successful. You can now log in with your new password.",
+      message:
+        "Password reset successful. You can now log in with your new password.",
     });
   } catch (error) {
     next(error);
