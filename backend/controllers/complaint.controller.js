@@ -402,7 +402,19 @@ exports.closeComplaint = async (req, res, next) => {
         .json({ success: false, message: "Complaint not found" });
     }
 
-    if (!complaint.userId || complaint.userId.toString() !== req.user.id) {
+    // Allow closure if complaint is owned by this user OR matched by email/phone
+    const userOwns =
+      complaint.userId && complaint.userId.toString() === req.user.id;
+    const userMatchesContact =
+      (req.user.email &&
+        complaint.contactEmail &&
+        complaint.contactEmail.toLowerCase() ===
+          req.user.email.toLowerCase()) ||
+      (req.user.phone &&
+        complaint.contactMobile &&
+        complaint.contactMobile === req.user.phone.trim());
+
+    if (!userOwns && !userMatchesContact) {
       return res
         .status(403)
         .json({ success: false, message: "Not authorized" });
@@ -484,7 +496,7 @@ exports.trackComplaintByContact = async (req, res, next) => {
     const complaints = await Complaint.find(query)
       .sort({ createdAt: -1 })
       .select(
-        "title description category priority status trackingStatus trackingHistory pnrNumber trainNumber contactMobile contactEmail createdAt resolvedAt assignedDepartment authorityMarkedDone authorityActionNotes customerMarkedDone",
+        "title description category priority status trackingStatus trackingHistory pnrNumber trainNumber contactMobile contactEmail createdAt resolvedAt assignedDepartment authorityMarkedDone authorityActionNotes customerMarkedDone userId satisfactionRating closureBlocked closureBlockedReason automationLog",
       );
 
     res.status(200).json({
