@@ -8,6 +8,7 @@ const {
   deleteComplaint,
   submitSatisfaction,
   customerConfirmResolved,
+  closeComplaint,
   trackComplaintByContact,
 } = require("../controllers/complaint.controller");
 const { protect, optionalProtect } = require("../middleware/auth.middleware");
@@ -57,5 +58,6 @@ router
 
 router.put("/:id/satisfaction", submitSatisfaction);
 router.put("/:id/confirm-resolved", customerConfirmResolved);
+router.put("/:id/close", closeComplaint);
 
 module.exports = router;

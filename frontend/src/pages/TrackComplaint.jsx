@@ -15,6 +15,7 @@ import {
   FaFilter,
   FaTrain,
   FaCalendarAlt,
+  FaTimesCircle,
 } from "react-icons/fa";
 import { MdSend, MdVerified } from "react-icons/md";
 
@@ -158,12 +159,31 @@ const TrackingTimeline = ({ trackingStatus, trackingHistory }) => {
 };
 
 // â”€â”€ Complaint card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const ComplaintCard = ({ complaint, index }) => {
+const ComplaintCard = ({ complaint, index, onUpdate }) => {
   const [expanded, setExpanded] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const dept =
     complaint.assignedDepartment !== "unassigned"
       ? complaint.assignedDepartment?.replace(/_/g, " ")
       : null;
+
+  const handleClose = async () => {
+    setClosing(true);
+    try {
+      await api.put(`/complaints/${complaint._id}/close`);
+      toast.success("Complaint closed. Thank you for your feedback!");
+      setShowConfirm(false);
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to close complaint");
+    } finally {
+      setClosing(false);
+    }
+  };
+
+  const canClose =
+    complaint.status !== "resolved" && complaint.status !== "rejected";
 
   return (
     <div className="card-glass mb-4 animate-fade-in">
@@ -206,7 +226,7 @@ const ComplaintCard = ({ complaint, index }) => {
       />
 
       {expanded && (
-        <div className="mt-4 pt-4 border-t border-gray-100 space-y-2 text-sm text-gray-700">
+        <div className="mt-4 pt-4 border-t border-gray-100 space-y-3 text-sm text-gray-700">
           <p>
             <strong>Description:</strong> {complaint.description}
           </p>
@@ -221,15 +241,52 @@ const ComplaintCard = ({ complaint, index }) => {
               <strong>Authority Notes:</strong> {complaint.authorityActionNotes}
             </div>
           )}
-          {complaint.resolvedAt && (
+          {complaint.resolvedAt ? (
             <p className="text-green-700 font-medium">
-              âœ… Resolved on:{" "}
+              ✅ Resolved on:{" "}
               {new Date(complaint.resolvedAt).toLocaleDateString("en-IN", {
                 day: "numeric",
                 month: "long",
                 year: "numeric",
               })}
             </p>
+          ) : (
+            canClose && (
+              <div className="pt-1">
+                {!showConfirm ? (
+                  <button
+                    onClick={() => setShowConfirm(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-all"
+                  >
+                    <FaCheckCircle /> Close Complaint — I&apos;m Satisfied
+                  </button>
+                ) : (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-sm font-semibold text-green-800 mb-3">
+                      Are you sure you want to close this complaint? This marks
+                      it as resolved.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleClose}
+                        disabled={closing}
+                        className="flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition disabled:opacity-60"
+                      >
+                        <FaCheckCircle />
+                        {closing ? "Closing..." : "Yes, Close It"}
+                      </button>
+                      <button
+                        onClick={() => setShowConfirm(false)}
+                        disabled={closing}
+                        className="flex items-center gap-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200 transition"
+                      >
+                        <FaTimesCircle /> Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
           )}
         </div>
       )}
@@ -418,7 +475,14 @@ const TrackComplaint = () => {
               found
             </p>
             {complaints.map((c, idx) => (
-              <ComplaintCard key={c._id} complaint={c} index={idx} />
+              <ComplaintCard
+                key={c._id}
+                complaint={c}
+                index={idx}
+                onUpdate={() =>
+                  fetchComplaints(pnrFilter, trainFilter, dateFrom, dateTo)
+                }
+              />
             ))}
           </>
         ) : (

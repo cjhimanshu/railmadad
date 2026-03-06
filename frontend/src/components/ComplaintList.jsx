@@ -199,6 +199,23 @@ const ComplaintList = ({ complaints, onUpdate, quickFilterStatus }) => {
     }
   };
 
+  const [closeConfirmId, setCloseConfirmId] = useState(null);
+  const [closingId, setClosingId] = useState(null);
+
+  const handleCloseComplaint = async (cId) => {
+    setClosingId(cId);
+    try {
+      await api.put(`/complaints/${cId}/close`);
+      toast.success("Complaint closed. Thank you for your feedback!");
+      setCloseConfirmId(null);
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to close complaint");
+    } finally {
+      setClosingId(null);
+    }
+  };
+
   const toggleExpand = (id) => setExpandedId(expandedId === id ? null : id);
 
   const formatDate = (dateString) =>
@@ -698,6 +715,60 @@ const ComplaintList = ({ complaints, onUpdate, quickFilterStatus }) => {
                                 </button>
                               </div>
                             )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                {/* ── Close Complaint (user-initiated) ── */}
+                {complaint.status !== "resolved" &&
+                  complaint.status !== "rejected" && (
+                    <div className="rounded-xl p-4 border-2 bg-emerald-50 border-emerald-200">
+                      {closeConfirmId === complaint._id ? (
+                        <div>
+                          <p className="text-sm font-semibold text-emerald-800 mb-3">
+                            Are you satisfied with the resolution? Closing this
+                            complaint marks it as resolved.
+                          </p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() =>
+                                handleCloseComplaint(complaint._id)
+                              }
+                              disabled={closingId === complaint._id}
+                              className="flex items-center gap-1 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition disabled:opacity-60"
+                            >
+                              <FaCheckCircle />
+                              {closingId === complaint._id
+                                ? "Closing..."
+                                : "Yes, Close Complaint"}
+                            </button>
+                            <button
+                              onClick={() => setCloseConfirmId(null)}
+                              disabled={closingId === complaint._id}
+                              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200 transition"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-emerald-800">
+                              Satisfied with the resolution?
+                            </p>
+                            <p className="text-xs text-emerald-600 mt-0.5">
+                              Close this complaint if your issue has been
+                              addressed.
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => setCloseConfirmId(complaint._id)}
+                            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-all whitespace-nowrap"
+                          >
+                            <FaCheckCircle /> Close Complaint
+                          </button>
                         </div>
                       )}
                     </div>

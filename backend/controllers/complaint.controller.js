@@ -390,6 +390,65 @@ exports.customerConfirmResolved = async (req, res, next) => {
   }
 };
 
+// @desc    User closes their own complaint (satisfied with resolution)
+// @route   PUT /api/complaints/:id/close
+// @access  Private
+exports.closeComplaint = async (req, res, next) => {
+  try {
+    const complaint = await Complaint.findById(req.params.id);
+    if (!complaint) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Complaint not found" });
+    }
+
+    if (!complaint.userId || complaint.userId.toString() !== req.user.id) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Not authorized" });
+    }
+
+    if (complaint.status === "resolved") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Complaint is already resolved." });
+    }
+
+    if (complaint.status === "rejected") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Complaint is already closed." });
+    }
+
+    complaint.status = "resolved";
+    complaint.resolvedAt = new Date();
+    complaint.trackingStatus = "resolved";
+    complaint.customerMarkedDone = true;
+    complaint.customerMarkedAt = new Date();
+    complaint.trackingHistory.push({
+      stage: "resolved",
+      updatedAt: new Date(),
+      note: "Complaint closed by user — satisfied with resolution.",
+    });
+    complaint.automationLog.push({
+      action: "CLOSED_BY_USER",
+      details:
+        "User manually closed the complaint as satisfied with the resolution.",
+      performedAt: new Date(),
+    });
+
+    await complaint.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Complaint closed successfully. Thank you for your feedback!",
+      data: complaint,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Track complaints for logged-in user (auto-uses their email/phone)
 // @route   GET /api/complaints/track
 // @access  Private
