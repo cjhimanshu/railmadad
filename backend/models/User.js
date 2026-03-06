@@ -46,6 +46,21 @@ const userSchema = new mongoose.Schema(
     },
     resetPasswordToken: String,
     resetPasswordExpire: Date,
+
+    // ─── Web Push subscriptions (one per device/browser) ─────────────────────
+    pushSubscriptions: {
+      type: [
+        {
+          endpoint: { type: String, required: true },
+          keys: {
+            p256dh: { type: String, required: true },
+            auth: { type: String, required: true },
+          },
+        },
+      ],
+      default: [],
+      select: false,
+    },
   },
   {
     timestamps: true,

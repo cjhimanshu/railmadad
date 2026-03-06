@@ -78,6 +78,7 @@ async function seedAdmin() {
 const authRoutes = require("./routes/auth.routes");
 const complaintRoutes = require("./routes/complaint.routes");
 const adminRoutes = require("./routes/admin.routes");
+const pushRoutes = require("./routes/push.routes");
 
 // Initialize app
 const app = express();
@@ -161,6 +162,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/complaints", complaintLimiter, complaintRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/push", pushRoutes);
 
 // Error handler (must be last)
 app.use(errorHandler);

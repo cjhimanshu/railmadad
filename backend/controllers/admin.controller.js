@@ -1,6 +1,7 @@
 const Complaint = require("../models/Complaint");
 const User = require("../models/User");
 const ControlUnitDispatch = require("../models/ControlUnitDispatch");
+const { sendPushToUser } = require("../services/push.service");
 
 // ── Simple in-memory analytics cache ─────────────────────────────────────────────────
 const analyticsCache = { data: null, lastUpdated: 0, TTL: 5 * 60 * 1000 }; // 5-minute TTL
@@ -136,6 +137,39 @@ exports.updateComplaintStatus = async (req, res, next) => {
     await complaint.save();
     await complaint.populate("userId", "name email phone");
 
+    // Push notification to user on status change
+    if (complaint.userId) {
+      const pushMessages = {
+        sent_to_authority: {
+          title: "📋 Complaint Forwarded – RailMadad",
+          body: `Your complaint "${complaint.title}" has been forwarded to the concerned authority.`,
+        },
+        authority_taken_action: {
+          title: "🔧 Action Taken – RailMadad",
+          body: `The authority has taken action on your complaint "${complaint.title}".`,
+        },
+        resolved: {
+          title: "✅ Complaint Resolved – RailMadad",
+          body: `Your complaint "${complaint.title}" has been successfully resolved.`,
+        },
+        rejected: {
+          title: "❌ Complaint Rejected – RailMadad",
+          body: `Your complaint "${complaint.title}" has been rejected. Contact support for details.`,
+        },
+      };
+      const msg =
+        pushMessages[complaint.trackingStatus] ||
+        pushMessages[complaint.status];
+      if (msg) {
+        sendPushToUser(complaint.userId, {
+          ...msg,
+          icon: "/train-icon.svg",
+          badge: "/train-icon.svg",
+          url: "/track-complaint",
+        });
+      }
+    }
+
     res.status(200).json({
       success: true,
       message: "Complaint updated successfully",
@@ -145,8 +179,6 @@ exports.updateComplaintStatus = async (req, res, next) => {
     next(error);
   }
 };
-
-// @desc    Authority marks action taken / done
 // @route   PUT /api/admin/complaints/:id/mark-done
 // @access  Private/Admin
 exports.markAuthorityDone = async (req, res, next) => {
@@ -186,6 +218,17 @@ exports.markAuthorityDone = async (req, res, next) => {
 
     await complaint.save();
     await complaint.populate("userId", "name email phone");
+
+    // Push notification: authority has acted
+    if (complaint.userId) {
+      sendPushToUser(complaint.userId, {
+        title: "🔧 Authority Has Taken Action – RailMadad",
+        body: `Action has been taken on your complaint "${complaint.title}". Please review and confirm resolution.`,
+        icon: "/train-icon.svg",
+        badge: "/train-icon.svg",
+        url: "/track-complaint",
+      });
+    }
 
     res.status(200).json({
       success: true,
