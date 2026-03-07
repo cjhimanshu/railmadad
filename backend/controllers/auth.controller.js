@@ -55,10 +55,10 @@ exports.register = async (req, res, next) => {
 
     // Create user
     const user = await User.create({
-      name,
-      email,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
       password: hashedPassword,
-      phone,
+      phone: phone ? phone.trim() : undefined,
     });
 
     // Generate token
