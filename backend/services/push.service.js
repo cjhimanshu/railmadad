@@ -56,3 +56,15 @@ const sendPushToUser = async (userId, payload) => {
 };
 
 module.exports = { sendPushToUser };
+
+/**
+ * Send a push notification to multiple users at once.
+ *
+ * @param {string[]} userIds - Array of MongoDB User _id strings
+ * @param {object}   payload - { title, body, icon, badge, url }
+ */
+const sendPushToMany = async (userIds, payload) => {
+  await Promise.allSettled(userIds.map((id) => sendPushToUser(id, payload)));
+};
+
+module.exports = { sendPushToUser, sendPushToMany };
