@@ -156,6 +156,8 @@ app.get("/", (req, res) => {
     message:
       "RailMadad API - AI-Integrated Railway Complaint Management System",
     version: "1.0.0",
+    uptime: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
   });
 });
 
