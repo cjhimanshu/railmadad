@@ -5,13 +5,14 @@ const validate = (req, res, next) => {
     const errors = validationResult(req);
 
     if (!errors.isEmpty()) {
+        const mapped = errors.array().map((err) => ({
+            field: err.path,
+            message: err.msg,
+        }));
         return res.status(400).json({
             success: false,
-            message: 'Validation failed',
-            errors: errors.array().map((err) => ({
-                field: err.path,
-                message: err.msg,
-            })),
+            message: mapped[0].message,
+            errors: mapped,
         });
     }
 
