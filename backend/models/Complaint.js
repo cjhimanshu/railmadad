@@ -198,6 +198,8 @@ complaintSchema.index({ status: 1, priority: 1, createdAt: -1 }); // combined ad
 complaintSchema.index({ assignedDepartment: 1, status: 1 }); // department filter
 complaintSchema.index({ slaDeadline: 1, status: 1, escalatedAt: 1 }); // SLA escalation cron
 complaintSchema.index({ category: 1, status: 1 }); // category analytics
+complaintSchema.index({ trackingStatus: 1, createdAt: -1 }); // public tracking queries
+complaintSchema.index({ dispatchedToControlUnit: 1, status: 1 }); // control unit dispatch queries
 complaintSchema.index({ trackingStatus: 1, createdAt: -1 }); // public tracking
 
 module.exports = mongoose.model("Complaint", complaintSchema);
