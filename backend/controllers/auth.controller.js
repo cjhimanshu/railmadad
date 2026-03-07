@@ -32,6 +32,14 @@ exports.register = async (req, res, next) => {
   try {
     const { name, email, password, phone } = req.body;
 
+    // Validate phone format if provided
+    if (phone && !/^\d{10}$/.test(phone.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number must be exactly 10 digits",
+      });
+    }
+
     // Check if user already exists
     const userExists = await User.findOne({ email });
     if (userExists) {
@@ -135,6 +143,9 @@ exports.login = async (req, res, next) => {
     // Generate token
     const token = generateToken(user._id);
 
+    // Record last login time
+    await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
+
     res.status(200).json({
       success: true,
       message: "Login successful",
@@ -207,6 +218,9 @@ exports.adminLogin = async (req, res, next) => {
     }
 
     const token = generateToken(user._id);
+
+    // Record last login time
+    await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
 
     res.status(200).json({
       success: true,
