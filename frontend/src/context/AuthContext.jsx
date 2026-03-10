@@ -22,11 +22,17 @@ export const AuthProvider = ({ children }) => {
     const savedUser = localStorage.getItem("user");
 
     if (token && savedUser) {
-      const parsed = JSON.parse(savedUser);
-      setUser(parsed);
-      // Re-register push in case subscription expired or device changed
-      if (parsed.role !== "admin") {
-        registerPush();
+      try {
+        const parsed = JSON.parse(savedUser);
+        setUser(parsed);
+        // Re-register push in case subscription expired or device changed
+        if (parsed.role !== "admin") {
+          registerPush();
+        }
+      } catch {
+        // Corrupted storage — clear and fall through as logged-out
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
       }
     }
     setLoading(false);
