@@ -42,7 +42,9 @@ async function seedAdmin() {
       return;
     }
 
-    const existing = await User.findOne({ email: adminEmail });
+    const existing = await User.findOne({ email: adminEmail }).select(
+      "+password",
+    );
     if (existing) {
       // Ensure role is admin and password is up to date
       const hasPasswordHash =

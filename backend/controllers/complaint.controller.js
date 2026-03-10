@@ -148,8 +148,9 @@ exports.getComplaint = async (req, res, next) => {
     }
 
     // Make sure user owns the complaint or is admin
+    // complaint.userId is populated (User object) or null for guest complaints
     if (
-      complaint.userId._id.toString() !== req.user.id &&
+      (!complaint.userId || complaint.userId._id.toString() !== req.user.id) &&
       req.user.role !== "admin"
     ) {
       return res.status(403).json({
@@ -182,7 +183,7 @@ exports.updateComplaint = async (req, res, next) => {
     }
 
     // Make sure user owns the complaint
-    if (complaint.userId.toString() !== req.user.id) {
+    if (!complaint.userId || complaint.userId.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
         message: "Not authorized to update this complaint",
@@ -233,7 +234,7 @@ exports.deleteComplaint = async (req, res, next) => {
     }
 
     // Make sure user owns the complaint
-    if (complaint.userId.toString() !== req.user.id) {
+    if (!complaint.userId || complaint.userId.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
         message: "Not authorized to delete this complaint",
@@ -280,7 +281,7 @@ exports.submitSatisfaction = async (req, res, next) => {
         .json({ success: false, message: "Complaint not found" });
     }
 
-    if (complaint.userId.toString() !== req.user.id) {
+    if (!complaint.userId || complaint.userId.toString() !== req.user.id) {
       return res
         .status(403)
         .json({ success: false, message: "Not authorized" });
@@ -338,7 +339,7 @@ exports.customerConfirmResolved = async (req, res, next) => {
         .json({ success: false, message: "Complaint not found" });
     }
 
-    if (complaint.userId.toString() !== req.user.id) {
+    if (!complaint.userId || complaint.userId.toString() !== req.user.id) {
       return res
         .status(403)
         .json({ success: false, message: "Not authorized" });
