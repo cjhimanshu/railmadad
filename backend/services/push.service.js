@@ -55,8 +55,6 @@ const sendPushToUser = async (userId, payload) => {
   }
 };
 
-module.exports = { sendPushToUser };
-
 /**
  * Send a push notification to multiple users at once.
  *
