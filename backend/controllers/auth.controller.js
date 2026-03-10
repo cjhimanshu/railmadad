@@ -255,7 +255,7 @@ exports.adminRegister = async (req, res, next) => {
       });
     }
 
-    const userExists = await User.findOne({ email });
+    const userExists = await User.findOne({ email: email.trim().toLowerCase() });
     if (userExists) {
       return res.status(400).json({
         success: false,
@@ -267,10 +267,10 @@ exports.adminRegister = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const user = await User.create({
-      name,
-      email,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
       password: hashedPassword,
-      phone,
+      phone: phone ? phone.trim() : undefined,
       role: "admin",
     });
 
