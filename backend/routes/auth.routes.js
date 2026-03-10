@@ -26,7 +26,20 @@ const registerValidation = [
 ];
 
 const loginValidation = [
-  body("email").isEmail().withMessage("Please provide a valid email"),
+  body("email")
+    .trim()
+    .notEmpty()
+    .withMessage("Please provide your email or mobile number")
+    .custom((value) => {
+      const isMobile = /^\d{10}$/.test(value);
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+      if (!isMobile && !isEmail) {
+        throw new Error(
+          "Please provide a valid email or 10-digit mobile number",
+        );
+      }
+      return true;
+    }),
   body("password").notEmpty().withMessage("Password is required"),
 ];
 
