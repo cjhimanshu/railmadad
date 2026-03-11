@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   FaTrain,
@@ -9,11 +9,14 @@ import {
   FaSearch,
   FaBars,
   FaTimes,
+  FaFileAlt,
+  FaTachometerAlt,
 } from "react-icons/fa";
 
 const Navbar = () => {
   const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleLogout = () => {
@@ -24,6 +27,23 @@ const Navbar = () => {
   };
 
   const closeMenu = () => setMenuOpen(false);
+
+  const isActive = (path) => location.pathname === path;
+
+  // Active style: white background with blue text, underline indicator
+  const desktopLinkClass = (path) =>
+    `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+      isActive(path)
+        ? "bg-white text-railway-blue shadow"
+        : "text-white/80 hover:text-white hover:bg-white/10"
+    }`;
+
+  const mobileLinkClass = (path) =>
+    `flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+      isActive(path)
+        ? "bg-white text-railway-blue font-semibold"
+        : "text-white hover:bg-white/10"
+    }`;
 
   return (
     <nav className="bg-gradient-to-r from-railway-blue to-blue-700 shadow-xl sticky top-0 z-50">
@@ -39,49 +59,48 @@ const Navbar = () => {
           </Link>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center space-x-6">
-            <div className="flex items-center space-x-2 text-white">
+          <div className="hidden md:flex items-center gap-2">
+            <div className="flex items-center gap-1.5 text-white/80 px-3 py-1.5 text-sm">
               <FaUser className="text-sm" />
-              <span className="font-medium max-w-[140px] truncate">
+              <span className="font-medium max-w-[120px] truncate">
                 {user?.name}
               </span>
               {isAdmin && (
-                <span className="badge bg-railway-orange text-white ml-2">
+                <span className="badge bg-railway-orange text-white ml-1">
                   Admin
                 </span>
               )}
             </div>
 
-            {isAdmin && (
-              <Link
-                to="/admin"
-                className="flex items-center space-x-1 text-white hover:text-railway-orange transition-colors"
-              >
+            {isAdmin ? (
+              <Link to="/admin" className={desktopLinkClass("/admin")}>
                 <FaChartBar />
+                <span>Dashboard</span>
+              </Link>
+            ) : (
+              <Link to="/dashboard" className={desktopLinkClass("/dashboard")}>
+                <FaTachometerAlt />
                 <span>Dashboard</span>
               </Link>
             )}
 
-            <Link
-              to="/track"
-              className="flex items-center space-x-1 text-white hover:text-green-300 transition-colors"
-              title="Track Complaint Status"
-            >
-              <FaSearch className="text-sm" />
-              <span>Track Status</span>
-            </Link>
+            {!isAdmin && (
+              <>
+                <Link to="/track" className={desktopLinkClass("/track")}>
+                  <FaSearch className="text-xs" />
+                  <span>Track Status</span>
+                </Link>
 
-            <Link
-              to="/submit"
-              className="flex items-center space-x-1 text-white hover:text-yellow-300 transition-colors text-sm font-medium"
-              title="File a new complaint"
-            >
-              <span>+ File Complaint</span>
-            </Link>
+                <Link to="/submit" className={desktopLinkClass("/submit")}>
+                  <FaFileAlt className="text-xs" />
+                  <span>File Complaint</span>
+                </Link>
+              </>
+            )}
 
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-all"
+              className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-all ml-2"
             >
               <FaSignOutAlt />
               <span>Logout</span>
@@ -101,8 +120,8 @@ const Navbar = () => {
 
       {/* Mobile dropdown menu */}
       {menuOpen && (
-        <div className="md:hidden bg-blue-800 border-t border-blue-600 px-4 py-3 space-y-1">
-          <div className="flex items-center gap-2 text-white py-2 border-b border-blue-600 mb-2">
+        <div className="md:hidden bg-blue-800 border-t border-blue-600 px-3 py-3 space-y-1">
+          <div className="flex items-center gap-2 text-white px-3 py-2 border-b border-blue-600 mb-2">
             <FaUser className="text-sm flex-shrink-0" />
             <span className="font-medium truncate">{user?.name}</span>
             {isAdmin && (
@@ -112,33 +131,47 @@ const Navbar = () => {
             )}
           </div>
 
-          {isAdmin && (
+          {isAdmin ? (
             <Link
               to="/admin"
               onClick={closeMenu}
-              className="flex items-center gap-2 text-white hover:text-railway-orange transition-colors py-2.5 text-sm font-medium"
+              className={mobileLinkClass("/admin")}
             >
               <FaChartBar className="flex-shrink-0" />
               <span>Dashboard</span>
             </Link>
+          ) : (
+            <Link
+              to="/dashboard"
+              onClick={closeMenu}
+              className={mobileLinkClass("/dashboard")}
+            >
+              <FaTachometerAlt className="flex-shrink-0" />
+              <span>Dashboard</span>
+            </Link>
           )}
 
-          <Link
-            to="/track"
-            onClick={closeMenu}
-            className="flex items-center gap-2 text-white hover:text-green-300 transition-colors py-2.5 text-sm font-medium"
-          >
-            <FaSearch className="text-sm flex-shrink-0" />
-            <span>Track Status</span>
-          </Link>
+          {!isAdmin && (
+            <>
+              <Link
+                to="/track"
+                onClick={closeMenu}
+                className={mobileLinkClass("/track")}
+              >
+                <FaSearch className="text-sm flex-shrink-0" />
+                <span>Track Status</span>
+              </Link>
 
-          <Link
-            to="/submit"
-            onClick={closeMenu}
-            className="flex items-center gap-2 text-white hover:text-yellow-300 transition-colors py-2.5 text-sm font-medium"
-          >
-            <span>+ File Complaint</span>
-          </Link>
+              <Link
+                to="/submit"
+                onClick={closeMenu}
+                className={mobileLinkClass("/submit")}
+              >
+                <FaFileAlt className="flex-shrink-0" />
+                <span>File Complaint</span>
+              </Link>
+            </>
+          )}
 
           <button
             onClick={handleLogout}
