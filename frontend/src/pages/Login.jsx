@@ -24,9 +24,9 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   // ── OTP login state ─────────────────────────────────────────────────────────
-  const [otpMobile, setOtpMobile] = useState("");
+  const [otpEmail, setOtpEmail] = useState("");
   const [otpCode, setOtpCode] = useState("");
-  const [otpStep, setOtpStep] = useState(1); // 1 = enter mobile, 2 = enter OTP
+  const [otpStep, setOtpStep] = useState(1); // 1 = enter email, 2 = enter OTP
   const [otpLoading, setOtpLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
 
@@ -75,14 +75,14 @@ const Login = () => {
   // ── OTP: send OTP ───────────────────────────────────────────────────────────
   const handleSendOtp = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (!/^\d{10}$/.test(otpMobile.trim())) {
-      toast.error("Please enter a valid 10-digit mobile number");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(otpEmail.trim())) {
+      toast.error("Please enter a valid email address");
       return;
     }
     setOtpLoading(true);
     try {
-      await api.post("/auth/send-otp", { mobile: otpMobile.trim() });
-      toast.success("OTP sent to your mobile number!");
+      await api.post("/auth/send-otp", { email: otpEmail.trim() });
+      toast.success("OTP sent to your email!");
       setOtpStep(2);
       setResendTimer(30);
       const interval = setInterval(() => {
@@ -114,7 +114,7 @@ const Login = () => {
     setOtpLoading(true);
     try {
       const response = await api.post("/auth/verify-otp", {
-        mobile: otpMobile.trim(),
+        email: otpEmail.trim(),
         otp: otpCode.trim(),
       });
       const { user, token } = response.data.data;
@@ -296,7 +296,7 @@ const Login = () => {
                   >
                     1
                   </span>
-                  Enter Mobile
+                  Enter Email
                 </div>
                 <div className="flex-1 border-t border-dashed border-gray-300" />
                 <div
@@ -311,39 +311,33 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* ── Step 1: Enter mobile number ──────────────────────────────── */}
+              {/* ── Step 1: Enter email address ───────────────────────────── */}
               {otpStep === 1 && (
                 <form onSubmit={handleSendOtp} className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Mobile Number
+                      Email Address
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-semibold text-sm select-none">
-                        +91
-                      </span>
+                      <FaEnvelope className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                       <input
-                        type="tel"
-                        value={otpMobile}
-                        onChange={(e) =>
-                          setOtpMobile(
-                            e.target.value.replace(/\D/g, "").slice(0, 10),
-                          )
-                        }
-                        className="input-field pl-12 font-mono tracking-widest"
-                        placeholder="10-digit mobile"
-                        maxLength={10}
+                        type="email"
+                        value={otpEmail}
+                        onChange={(e) => setOtpEmail(e.target.value)}
+                        className="input-field pl-10"
+                        placeholder="you@example.com"
                         required
+                        autoFocus
                       />
                     </div>
                     <p className="text-xs text-gray-400 mt-1">
-                      Enter the mobile number you used when filing a complaint
+                      Enter the email address you used when filing a complaint
                     </p>
                   </div>
 
                   <button
                     type="submit"
-                    disabled={otpLoading || otpMobile.length !== 10}
+                    disabled={otpLoading || !otpEmail.trim()}
                     className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white font-bold py-3 px-4 rounded-xl transition-all"
                   >
                     {otpLoading ? (
@@ -352,7 +346,7 @@ const Login = () => {
                       </>
                     ) : (
                       <>
-                        <FaMobileAlt /> Send OTP
+                        <FaEnvelope /> Send OTP
                       </>
                     )}
                   </button>
@@ -363,9 +357,9 @@ const Login = () => {
               {otpStep === 2 && (
                 <form onSubmit={handleVerifyOtp} className="space-y-4">
                   <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-start gap-2">
-                    <FaMobileAlt className="mt-0.5 flex-shrink-0" />
+                    <FaEnvelope className="mt-0.5 flex-shrink-0" />
                     <span>
-                      OTP sent to <strong>+91 {otpMobile}</strong>
+                      OTP sent to <strong>{otpEmail}</strong>
                     </span>
                   </div>
 
@@ -415,7 +409,7 @@ const Login = () => {
                       }}
                       className="hover:text-railway-blue hover:underline"
                     >
-                      ← Change number
+                      ← Change email
                     </button>
                     {resendTimer > 0 ? (
                       <span>Resend in {resendTimer}s</span>

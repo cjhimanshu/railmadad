@@ -1,10 +1,10 @@
 const mongoose = require("mongoose");
 
-// Stores temporary OTP codes for mobile-based login.
+// Stores temporary OTP codes for email-based login.
 // TTL index auto-deletes expired documents from MongoDB.
 const otpSchema = new mongoose.Schema({
-  mobile: {
-    type: String,
+  identifier: {
+    type: String, // email address
     required: true,
     index: true,
   },

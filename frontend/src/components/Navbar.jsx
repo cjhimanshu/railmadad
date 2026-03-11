@@ -51,7 +51,7 @@ const Navbar = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link
-            to={isAdmin ? "/admin" : "/dashboard"}
+            to="/"
             className="flex items-center space-x-2 text-white hover:opacity-80 transition-opacity"
           >
             <FaTrain className="text-2xl" />

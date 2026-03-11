@@ -166,13 +166,15 @@ const Coach = ({ coach }) => {
 const UserDashboard = () => {
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
     fetchComplaints();
   }, []);
 
-  const fetchComplaints = async () => {
+  const fetchComplaints = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
     try {
       const response = await api.get("/complaints");
       setComplaints(response.data.data);
@@ -180,6 +182,7 @@ const UserDashboard = () => {
       console.error("Error fetching complaints:", error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -376,11 +379,12 @@ const UserDashboard = () => {
             {showForm ? "Hide Form" : "New Complaint"}
           </button>
           <button
-            onClick={fetchComplaints}
-            className="btn-secondary flex items-center gap-2"
+            onClick={() => fetchComplaints(true)}
+            disabled={refreshing}
+            className="btn-secondary flex items-center gap-2 disabled:opacity-60"
           >
-            <FaSync />
-            Refresh
+            <FaSync className={refreshing ? "animate-spin" : ""} />
+            {refreshing ? "Refreshing..." : "Refresh"}
           </button>
         </div>
 

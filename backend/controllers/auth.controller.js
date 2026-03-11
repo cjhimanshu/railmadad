@@ -405,107 +405,114 @@ exports.resetPassword = async (req, res, next) => {
   }
 };
 
-// ─── Twilio Verify client (initialised once at startup) ─────────────────────
-let _twilioVerifyService = null;
-const getTwilioVerify = () => {
-  if (_twilioVerifyService) return _twilioVerifyService;
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
-  if (!accountSid || !authToken || !serviceSid) {
-    throw new Error(
-      "Twilio Verify is not configured. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_VERIFY_SERVICE_SID to your .env",
-    );
-  }
-  const twilio = require("twilio");
-  _twilioVerifyService = twilio(accountSid, authToken).verify.v2.services(
-    serviceSid,
-  );
-  return _twilioVerifyService;
-};
+// ─── OTP helper ───────────────────────────────────────────────────────────────
+const generateOtp = () =>
+  Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit
 
-// @desc    Send OTP to mobile number (must have filed a complaint with that mobile)
+// @desc    Send OTP to email for login
 // @route   POST /api/auth/send-otp
 // @access  Public
 exports.sendOtp = async (req, res, next) => {
   try {
-    const { mobile } = req.body;
+    const { email } = req.body;
 
-    if (!mobile || !/^\d{10}$/.test(mobile.trim())) {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       return res.status(400).json({
         success: false,
-        message: "Please enter a valid 10-digit mobile number",
+        message: "Please enter a valid email address",
       });
     }
 
-    const cleanMobile = mobile.trim();
+    const cleanEmail = email.trim().toLowerCase();
 
-    // Send OTP via Twilio Verify
-    const verifyService = getTwilioVerify();
-    await verifyService.verifications.create({
-      to: `+91${cleanMobile}`,
-      channel: "sms",
+    // Generate OTP
+    const otp = generateOtp();
+    const salt = await bcrypt.genSalt(10);
+    const otpHash = await bcrypt.hash(otp, salt);
+
+    // Upsert: delete any previous OTP for this email then insert fresh
+    await OtpModel.deleteMany({ identifier: cleanEmail });
+    await OtpModel.create({
+      identifier: cleanEmail,
+      otpHash,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+    });
+
+    // Send via Resend email
+    const html = `
+      <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">
+        <div style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8);padding:24px 32px">
+          <h1 style="margin:0;color:#fff;font-size:20px">🚆 RailMadad</h1>
+          <p style="margin:4px 0 0;color:#bfdbfe;font-size:13px">Railway Complaint Management System</p>
+        </div>
+        <div style="padding:32px">
+          <h2 style="color:#1e293b;margin-top:0">Your Login OTP</h2>
+          <p style="color:#475569">Use the code below to sign in to RailMadad. It expires in <strong>10 minutes</strong>.</p>
+          <div style="text-align:center;margin:28px 0">
+            <div style="display:inline-block;background:#f1f5f9;border:2px dashed #94a3b8;border-radius:12px;padding:16px 40px">
+              <span style="font-size:2.5rem;font-weight:900;letter-spacing:0.3em;color:#1e3a8a;font-family:monospace">${otp}</span>
+            </div>
+          </div>
+          <p style="color:#94a3b8;font-size:12px">If you didn't request this OTP, you can safely ignore this email.</p>
+        </div>
+      </div>`;
+
+    await sendEmail({
+      email: cleanEmail,
+      subject: "RailMadad — Your Login OTP",
+      html,
     });
 
     res.status(200).json({
       success: true,
-      message: "OTP sent to your mobile number",
+      message: "OTP sent to your email address",
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Verify OTP and log in (auto-creates account if new mobile)
+// @desc    Verify OTP and log in (auto-creates account if new email)
 // @route   POST /api/auth/verify-otp
 // @access  Public
 exports.verifyOtp = async (req, res, next) => {
   try {
-    const { mobile, otp } = req.body;
+    const { email, otp } = req.body;
 
-    if (!mobile || !otp) {
+    if (!email || !otp) {
       return res.status(400).json({
         success: false,
-        message: "Mobile number and OTP are required",
+        message: "Email and OTP are required",
       });
     }
 
-    const cleanMobile = mobile.trim();
+    const cleanEmail = email.trim().toLowerCase();
 
-    // Verify OTP via Twilio Verify
-    const verifyService = getTwilioVerify();
-    let check;
-    try {
-      check = await verifyService.verificationChecks.create({
-        to: `+91${cleanMobile}`,
-        code: otp.trim(),
-      });
-    } catch (twilioErr) {
-      // Twilio throws 404 when OTP is expired, already used, or never sent
+    // Find the stored OTP record
+    const otpRecord = await OtpModel.findOne({ identifier: cleanEmail });
+    if (!otpRecord || otpRecord.expiresAt < new Date()) {
+      await OtpModel.deleteMany({ identifier: cleanEmail });
       return res.status(400).json({
         success: false,
         message: "OTP has expired or is invalid. Please request a new one.",
       });
     }
 
-    if (check.status !== "approved") {
+    const isMatch = await bcrypt.compare(otp.trim(), otpRecord.otpHash);
+    if (!isMatch) {
       return res.status(400).json({
         success: false,
         message: "Invalid OTP. Please try again.",
       });
     }
 
-    // Find or auto-create the user account linked to this mobile
-    let user = await User.findOne({ phone: cleanMobile });
+    // OTP is valid — delete it so it can't be reused
+    await OtpModel.deleteMany({ identifier: cleanEmail });
+
+    // Find or auto-create the user account linked to this email
+    let user = await User.findOne({ email: cleanEmail });
 
     if (!user) {
-      // Grab the most recent complaint to get a name / contact email
-      const latestComplaint = await Complaint.findOne({
-        contactMobile: cleanMobile,
-      })
-        .sort({ createdAt: -1 })
-        .lean();
-
       const salt = await bcrypt.genSalt(10);
       const randomPasswd = await bcrypt.hash(
         crypto.randomBytes(32).toString("hex"),
@@ -513,10 +520,9 @@ exports.verifyOtp = async (req, res, next) => {
       );
 
       user = await User.create({
-        name: `User-${cleanMobile.slice(-4)}`, // e.g. "User-4567"
-        email: `${cleanMobile}@otp.railmadad.local`, // internal placeholder
+        name: cleanEmail.split("@")[0], // use email prefix as display name
+        email: cleanEmail,
         password: randomPasswd,
-        phone: cleanMobile,
         isOtpUser: true,
       });
     }
