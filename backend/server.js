@@ -85,6 +85,9 @@ const pushRoutes = require("./routes/push.routes");
 // Initialize app
 const app = express();
 
+// Trust Render's proxy (required for express-rate-limit behind a reverse proxy)
+app.set("trust proxy", 1);
+
 // Connect to database
 connectDB().then(async () => {
   // Seed fixed admin account
