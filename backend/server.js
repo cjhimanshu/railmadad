@@ -104,13 +104,23 @@ app.use(compression()); // gzip all responses
 app.use(
   cors({
     origin: (origin, callback) => {
+      // Allow no-origin requests (mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+
       const allowed = [
-        process.env.FRONTEND_URL || "http://localhost:3000",
+        process.env.FRONTEND_URL,
         "http://localhost:3000",
         "http://localhost:3001",
         "http://localhost:3002",
-      ];
-      if (!origin || allowed.includes(origin)) return callback(null, true);
+        "http://localhost:5173",
+      ].filter(Boolean);
+
+      // Allow any Vercel preview/production URL for this project
+      const isVercel =
+        origin.endsWith(".vercel.app") ||
+        origin.includes("railmadad");
+
+      if (allowed.includes(origin) || isVercel) return callback(null, true);
       callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
