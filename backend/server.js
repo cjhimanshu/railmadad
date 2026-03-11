@@ -117,8 +117,7 @@ app.use(
 
       // Allow any Vercel preview/production URL for this project
       const isVercel =
-        origin.endsWith(".vercel.app") ||
-        origin.includes("railmadad");
+        origin.endsWith(".vercel.app") || origin.includes("railmadad");
 
       if (allowed.includes(origin) || isVercel) return callback(null, true);
       callback(new Error("Not allowed by CORS"));
