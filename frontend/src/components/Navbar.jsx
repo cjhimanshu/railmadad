@@ -17,9 +17,10 @@ const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleLogout = () => {
+    const wasAdmin = isAdmin;
     logout();
     setMenuOpen(false);
-    navigate("/login");
+    navigate(wasAdmin ? "/admin-login" : "/login");
   };
 
   const closeMenu = () => setMenuOpen(false);
@@ -80,7 +81,7 @@ const Navbar = () => {
 
             <button
               onClick={handleLogout}
-              className="flex items-center space-x-1 text-white hover:text-red-300 transition-colors"
+              className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-all"
             >
               <FaSignOutAlt />
               <span>Logout</span>
@@ -141,7 +142,7 @@ const Navbar = () => {
 
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 text-white hover:text-red-300 transition-colors py-2.5 text-sm font-medium w-full"
+            className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-all w-full mt-1"
           >
             <FaSignOutAlt className="flex-shrink-0" />
             <span>Logout</span>
