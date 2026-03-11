@@ -29,13 +29,22 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    const requestUrl = error.config?.url || "";
+    const isAuthRequest = requestUrl.includes("/auth/");
+
+    // For auth endpoints (login/register/etc.), let the component handle
+    // the error and toast — no redirect, no duplicate toast here.
+    if (isAuthRequest) {
+      return Promise.reject(error);
+    }
+
     const message =
       error.response?.data?.message || error.message || "Something went wrong";
 
     // Show error toast
     toast.error(message);
 
-    // Handle 401 - Unauthorized
+    // Handle 401 - session expired / invalid token during an authenticated request
     if (error.response?.status === 401) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");

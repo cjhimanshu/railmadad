@@ -753,7 +753,7 @@ const ComplaintManagement = ({ onUpdate, initialFilter }) => {
           onChange={(e) =>
             setFilters((f) => ({ ...f, search: e.target.value }))
           }
-          className="input-field flex-1 min-w-48 text-sm py-2"
+          className="input-field flex-1 min-w-0 w-full sm:min-w-48 text-sm py-2"
         />
         <select
           value={filters.status}

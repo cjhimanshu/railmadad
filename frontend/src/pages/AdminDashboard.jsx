@@ -533,7 +533,7 @@ const AdminDashboard = () => {
         {/* Total banner + Tab nav */}
         <div className="mb-8 bg-white/80 backdrop-blur-sm rounded-2xl shadow-md border border-white/60 overflow-hidden">
           {/* stats strip */}
-          <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center gap-6">
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex flex-wrap items-center gap-4 sm:gap-6">
             <div>
               <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">
                 Total Complaints
@@ -618,7 +618,7 @@ const AdminDashboard = () => {
         {/* Complaints section — only appears after card click */}
         {showComplaints && (
           <div id="complaint-section" className="animate-slide-up">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <div>
                 <h2 className="text-xl font-bold text-gray-800">
                   {activeCardLabel === "All"

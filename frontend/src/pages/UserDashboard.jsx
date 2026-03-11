@@ -367,7 +367,7 @@ const UserDashboard = () => {
         {/* ─────────────────────────────────────────────────────── */}
 
         {/* Action Buttons */}
-        <div className="flex gap-3 mb-6">
+        <div className="flex flex-wrap gap-3 mb-6">
           <button
             onClick={() => setShowForm(!showForm)}
             className="btn-primary flex items-center gap-2"

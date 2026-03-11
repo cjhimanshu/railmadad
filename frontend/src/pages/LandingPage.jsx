@@ -38,12 +38,12 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-950 text-white">
       {/* Navbar */}
-      <nav className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+      <nav className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-white/10">
         <div className="flex items-center gap-2 text-xl font-bold">
           <FaTrain className="text-yellow-400 text-2xl" />
           <span>RailMadad</span>
         </div>
-        <div className="flex items-center gap-4 text-sm">
+        <div className="flex items-center gap-2 sm:gap-4 text-sm">
           {user ? (
             <>
               <Link
@@ -80,19 +80,19 @@ const LandingPage = () => {
       </nav>
 
       {/* Hero */}
-      <div className="max-w-4xl mx-auto px-6 pt-20 pb-16 text-center">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-10 sm:pt-20 pb-10 sm:pb-16 text-center">
         <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-sm mb-6">
           <FaTrain className="text-yellow-400" />
           <span>Indian Railway Complaint Portal</span>
         </div>
 
-        <h1 className="text-5xl md:text-6xl font-black mb-4 leading-tight">
+        <h1 className="text-3xl sm:text-5xl md:text-6xl font-black mb-4 leading-tight">
           Your Voice,{" "}
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-400">
             Heard Fast
           </span>
         </h1>
-        <p className="text-lg text-white/70 max-w-xl mx-auto mb-12">
+        <p className="text-base sm:text-lg text-white/70 max-w-xl mx-auto mb-8 sm:mb-12">
           File a railway complaint in seconds — no account required. Login only
           when you want to check its progress.
         </p>
@@ -136,7 +136,7 @@ const LandingPage = () => {
       </div>
 
       {/* How it works */}
-      <div className="max-w-4xl mx-auto px-6 pb-20">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-12 sm:pb-20">
         <h2 className="text-center text-sm font-bold uppercase tracking-widest text-white/40 mb-8">
           How it works
         </h2>
