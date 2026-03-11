@@ -6,10 +6,12 @@ const User = require("../models/User");
 const Complaint = require("../models/Complaint");
 const OtpModel = require("../models/Otp");
 
-// ─── Email helper (Resend — API-key only, no SMTP credentials) ───────────────
+// ─── Resend client (initialised once) ────────────────────────────────────────
+const resendClient = new Resend(process.env.RESEND_API_KEY);
+
+// ─── Email helper ─────────────────────────────────────────────────────────────
 const sendEmail = async ({ email, subject, html }) => {
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  const { error } = await resend.emails.send({
+  const { error } = await resendClient.emails.send({
     from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
     to: email,
     subject,
@@ -403,11 +405,10 @@ exports.resetPassword = async (req, res, next) => {
   }
 };
 
-// ─── SMS helper (Twilio) ──────────────────────────────────────────────────────
-// If TWILIO_* env vars are not set, OTP is printed to the server console
-// so you can test locally without an SMS provider.
-// Returns a Twilio Verify client (throws if env vars missing)
+// ─── Twilio Verify client (initialised once at startup) ─────────────────────
+let _twilioVerifyService = null;
 const getTwilioVerify = () => {
+  if (_twilioVerifyService) return _twilioVerifyService;
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
@@ -416,8 +417,11 @@ const getTwilioVerify = () => {
       "Twilio Verify is not configured. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_VERIFY_SERVICE_SID to your .env",
     );
   }
-  const client = require("twilio")(accountSid, authToken);
-  return client.verify.v2.services(serviceSid);
+  const twilio = require("twilio");
+  _twilioVerifyService = twilio(accountSid, authToken).verify.v2.services(
+    serviceSid,
+  );
+  return _twilioVerifyService;
 };
 
 // @desc    Send OTP to mobile number (must have filed a complaint with that mobile)
