@@ -1,23 +1,28 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const { Resend } = require("resend");
+const nodemailer = require("nodemailer");
 const User = require("../models/User");
 const Complaint = require("../models/Complaint");
 const OtpModel = require("../models/Otp");
 
-// ─── Resend client (initialised once) ────────────────────────────────────────
-const resendClient = new Resend(process.env.RESEND_API_KEY);
+// ─── Gmail SMTP transporter (initialised once) ────────────────────────────────
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+});
 
 // ─── Email helper ─────────────────────────────────────────────────────────────
 const sendEmail = async ({ email, subject, html }) => {
-  const { error } = await resendClient.emails.send({
-    from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
+  await transporter.sendMail({
+    from: `"RailMadad" <${process.env.GMAIL_USER}>`,
     to: email,
     subject,
     html,
   });
-  if (error) throw new Error(error.message);
 };
 
 // Generate JWT Token
