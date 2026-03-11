@@ -1,28 +1,23 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 const User = require("../models/User");
 const Complaint = require("../models/Complaint");
 const OtpModel = require("../models/Otp");
 
-// ─── Gmail SMTP transporter (initialised once) ────────────────────────────────
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-});
+// ─── Resend client (HTTPS-based, works on Render free tier) ───────────────────
+const resendClient = new Resend(process.env.RESEND_API_KEY);
 
 // ─── Email helper ─────────────────────────────────────────────────────────────
 const sendEmail = async ({ email, subject, html }) => {
-  await transporter.sendMail({
-    from: `"RailMadad" <${process.env.GMAIL_USER}>`,
+  const { error } = await resendClient.emails.send({
+    from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
     to: email,
     subject,
     html,
   });
+  if (error) throw new Error(error.message);
 };
 
 // Generate JWT Token
