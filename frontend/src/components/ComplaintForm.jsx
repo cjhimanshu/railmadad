@@ -63,11 +63,7 @@ const ComplaintForm = ({ onSubmitSuccess }) => {
         formDataToSend.append("image", image);
       }
 
-      const response = await api.post("/complaints", formDataToSend, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await api.post("/complaints", formDataToSend);
 
       const complaint = response.data.data;
 
