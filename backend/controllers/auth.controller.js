@@ -6,12 +6,11 @@ const User = require("../models/User");
 const Complaint = require("../models/Complaint");
 const OtpModel = require("../models/Otp");
 
-// ─── Resend client (HTTPS-based, works on Render free tier) ───────────────────
-const resendClient = new Resend(process.env.RESEND_API_KEY);
+// ─── Resend email helper ──────────────────────────────────────────────────────
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-// ─── Email helper ─────────────────────────────────────────────────────────────
 const sendEmail = async ({ email, subject, html }) => {
-  const { error } = await resendClient.emails.send({
+  const { error } = await resend.emails.send({
     from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
     to: email,
     subject,

@@ -1,25 +1,21 @@
 const User = require("../models/User");
 
-// @desc    Save a push subscription for the logged-in user
+// @desc    Save an FCM registration token for the logged-in user
 // @route   POST /api/push/subscribe
 // @access  Private
 exports.subscribe = async (req, res, next) => {
   try {
-    const { endpoint, keys } = req.body;
+    const { token } = req.body;
 
-    if (!endpoint || !keys?.p256dh || !keys?.auth) {
+    if (!token || typeof token !== "string") {
       return res
         .status(400)
-        .json({ success: false, message: "Invalid subscription object" });
+        .json({ success: false, message: "FCM token is required" });
     }
 
-    // Avoid duplicates — upsert by endpoint
-    await User.findByIdAndUpdate(req.user.id, {
-      $pull: { pushSubscriptions: { endpoint } }, // remove if already exists
-    });
-    await User.findByIdAndUpdate(req.user.id, {
-      $push: { pushSubscriptions: { endpoint, keys } },
-    });
+    // Avoid duplicates — pull then push
+    await User.findByIdAndUpdate(req.user.id, { $pull: { fcmTokens: token } });
+    await User.findByIdAndUpdate(req.user.id, { $push: { fcmTokens: token } });
 
     res.status(200).json({ success: true, message: "Push subscription saved" });
   } catch (error) {
@@ -27,21 +23,24 @@ exports.subscribe = async (req, res, next) => {
   }
 };
 
-// @desc    Remove a push subscription (user turns off notifications)
+// @desc    Remove FCM token(s) for the logged-in user
 // @route   DELETE /api/push/unsubscribe
 // @access  Private
 exports.unsubscribe = async (req, res, next) => {
   try {
-    const { endpoint } = req.body;
-    if (!endpoint) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Endpoint is required" });
-    }
+    const { token } = req.body;
 
-    await User.findByIdAndUpdate(req.user.id, {
-      $pull: { pushSubscriptions: { endpoint } },
-    });
+    if (token) {
+      // Remove a specific token (single device logout)
+      await User.findByIdAndUpdate(req.user.id, {
+        $pull: { fcmTokens: token },
+      });
+    } else {
+      // Remove all tokens (full logout)
+      await User.findByIdAndUpdate(req.user.id, {
+        $set: { fcmTokens: [] },
+      });
+    }
 
     res
       .status(200)

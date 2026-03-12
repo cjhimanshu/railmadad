@@ -1,27 +1,39 @@
-// RailMadad Service Worker — handles Web Push notifications
+// RailMadad Service Worker — Firebase Cloud Messaging (background handler)
+// Firebase config is injected via query params when the SW is registered.
 
-self.addEventListener("push", (event) => {
-  if (!event.data) return;
+importScripts(
+  "https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js",
+);
+importScripts(
+  "https://www.gstatic.com/firebasejs/10.11.0/firebase-messaging-compat.js",
+);
 
-  let payload;
-  try {
-    payload = event.data.json();
-  } catch {
-    payload = { title: "RailMadad", body: event.data.text() };
-  }
+// Read config from URL search params (set by push.js → buildSwUrl())
+const params = new URL(self.location.href).searchParams;
 
-  const options = {
-    body: payload.body || "",
-    icon: payload.icon || "/train-icon.svg",
-    badge: payload.badge || "/train-icon.svg",
-    data: { url: payload.url || "/" },
+firebase.initializeApp({
+  apiKey: params.get("apiKey"),
+  authDomain: params.get("authDomain"),
+  projectId: params.get("projectId"),
+  storageBucket: params.get("storageBucket"),
+  messagingSenderId: params.get("messagingSenderId"),
+  appId: params.get("appId"),
+});
+
+const messaging = firebase.messaging();
+
+// Handle background / terminated messages sent by Firebase
+messaging.onBackgroundMessage((payload) => {
+  const notif = payload.notification || {};
+  const data = payload.data || {};
+
+  self.registration.showNotification(notif.title || "RailMadad", {
+    body: notif.body || "",
+    icon: notif.icon || "/train-icon.svg",
+    badge: "/train-icon.svg",
+    data: { url: notif.click_action || data.url || "/" },
     vibrate: [200, 100, 200],
-    requireInteraction: false,
-  };
-
-  event.waitUntil(
-    self.registration.showNotification(payload.title || "RailMadad", options),
-  );
+  });
 });
 
 // Open / focus the relevant page when notification is clicked
@@ -33,7 +45,6 @@ self.addEventListener("notificationclick", (event) => {
     clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((windowClients) => {
-        // If app is already open, focus it and navigate
         for (const client of windowClients) {
           if ("focus" in client) {
             client.focus();
@@ -41,10 +52,7 @@ self.addEventListener("notificationclick", (event) => {
             return;
           }
         }
-        // Otherwise open a new window
-        if (clients.openWindow) {
-          return clients.openWindow(targetUrl);
-        }
+        if (clients.openWindow) return clients.openWindow(targetUrl);
       }),
   );
 });
