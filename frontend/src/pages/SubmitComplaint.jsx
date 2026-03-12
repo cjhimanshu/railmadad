@@ -31,8 +31,9 @@ const SubmitComplaint = () => {
             concerned railway authority.
             <br />
             <br />
-            To <strong>track the status</strong> of your complaint, login with
-            the same email or mobile number you provided.
+            <strong>Check your email</strong> — we've sent you a link to set
+            your password. Once set, you can login anytime to track the status
+            of your complaint.
           </p>
 
           <div className="space-y-3">
