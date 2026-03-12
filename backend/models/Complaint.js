@@ -88,7 +88,7 @@ const complaintSchema = new mongoose.Schema(
     contactMobile: {
       type: String,
       trim: true,
-      required: [true, "Please provide your mobile number"],
+      default: null,
       match: [/^\d{10}$/, "Mobile number must be a 10-digit number"],
     },
     contactEmail: {

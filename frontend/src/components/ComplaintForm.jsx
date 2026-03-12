@@ -205,7 +205,10 @@ const ComplaintForm = ({ onSubmitSuccess }) => {
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               <FaPhone className="inline mr-1 text-green-600" />
-              Mobile Number *
+              Mobile Number
+              <span className="ml-1 text-xs font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                Optional
+              </span>
             </label>
             <input
               type="tel"
@@ -218,10 +221,9 @@ const ComplaintForm = ({ onSubmitSuccess }) => {
               className="input-field"
               placeholder="10-digit mobile no."
               maxLength="10"
-              required
             />
             <p className="text-xs text-gray-400 mt-1">
-              For update notifications
+              For additional notifications
             </p>
           </div>
 
