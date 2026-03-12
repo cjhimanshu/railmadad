@@ -21,11 +21,20 @@ exports.createComplaint = async (req, res, next) => {
     } = req.body;
 
     // Validate required contact info for guest submissions
-    if (!req.user && !contactMobile && !contactEmail) {
+    if (!req.user && !contactEmail) {
       return res.status(400).json({
         success: false,
         message:
-          "Please provide a contact mobile or email so you can track your complaint later.",
+          "Please provide your email address so you can login and track your complaint.",
+      });
+    }
+    if (
+      contactEmail &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim())
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid email address.",
       });
     }
 

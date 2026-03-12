@@ -58,9 +58,7 @@ const ComplaintForm = ({ onSubmitSuccess }) => {
       if (formData.contactMobile.trim()) {
         formDataToSend.append("contactMobile", formData.contactMobile.trim());
       }
-      if (formData.contactEmail.trim()) {
-        formDataToSend.append("contactEmail", formData.contactEmail.trim());
-      }
+      formDataToSend.append("contactEmail", formData.contactEmail.trim());
       if (image) {
         formDataToSend.append("image", image);
       }
@@ -231,10 +229,7 @@ const ComplaintForm = ({ onSubmitSuccess }) => {
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               <FaEnvelope className="inline mr-1 text-blue-500" />
-              Email Address
-              <span className="ml-1 text-xs font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                Optional
-              </span>
+              Email Address *
             </label>
             <input
               type="email"
@@ -243,9 +238,10 @@ const ComplaintForm = ({ onSubmitSuccess }) => {
               onChange={handleChange}
               className="input-field"
               placeholder="your@email.com"
+              required
             />
             <p className="text-xs text-gray-400 mt-1">
-              For update notifications
+              Used to login &amp; track your complaint
             </p>
           </div>
         </div>
