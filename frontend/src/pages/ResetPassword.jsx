@@ -71,11 +71,11 @@ const ResetPassword = () => {
                 </div>
               </div>
               <h2 className="text-xl font-bold text-railway-dark mb-2">
-                Password Updated!
+                Password Set!
               </h2>
               <p className="text-gray-600 mb-6">
-                Your password has been reset successfully. Redirecting you to
-                login…
+                Your password has been set successfully. Login now to track your
+                complaint status.
               </p>
               <Link to="/login" className="btn-primary inline-block px-8">
                 Go to Login

@@ -44,7 +44,17 @@ const Register = () => {
       const msg =
         error.response?.data?.message ||
         "Registration failed. Please try again.";
-      toast.error(msg);
+      if (
+        error.response?.status === 400 &&
+        msg.toLowerCase().includes("already exists")
+      ) {
+        toast.error(
+          "An account with this email already exists. If you submitted a complaint with this email, check your inbox for a password setup link — or use Forgot Password on the login page.",
+          { autoClose: 8000 },
+        );
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }

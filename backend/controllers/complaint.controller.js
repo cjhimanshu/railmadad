@@ -177,6 +177,10 @@ exports.createComplaint = async (req, res, next) => {
           subject: "RailMadad — Set Your Password to Track Your Complaint",
           html,
         });
+        // Link this complaint to the user account so it appears in their dashboard
+        await Complaint.findByIdAndUpdate(complaint._id, {
+          userId: accountUser._id,
+        });
       } catch (accountErr) {
         // Don't fail the complaint submission if account setup email fails
         console.error("Auto account setup error:", accountErr.message);
@@ -198,9 +202,27 @@ exports.createComplaint = async (req, res, next) => {
 // @access  Private
 exports.getUserComplaints = async (req, res, next) => {
   try {
-    const complaints = await Complaint.find({ userId: req.user.id })
+    // Fetch complaints owned by userId OR matched by contactEmail (guest submissions
+    // that were later linked when account was auto-created)
+    const complaints = await Complaint.find({
+      $or: [
+        { userId: req.user.id },
+        { contactEmail: req.user.email, userId: null },
+      ],
+    })
       .sort({ createdAt: -1 })
       .populate("userId", "name email");
+
+    // Silently back-link any unlinked email-matched complaints
+    const unlinked = complaints.filter(
+      (c) => !c.userId && c.contactEmail === req.user.email,
+    );
+    if (unlinked.length > 0) {
+      await Complaint.updateMany(
+        { _id: { $in: unlinked.map((c) => c._id) } },
+        { userId: req.user.id },
+      );
+    }
 
     res.status(200).json({
       success: true,
