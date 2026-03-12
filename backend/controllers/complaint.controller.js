@@ -4,7 +4,6 @@ const aiService = require("../services/ai.service");
 const automationService = require("../services/automation.service");
 const controlUnitService = require("../services/controlUnit.service");
 const { enqueueAI } = require("../queues/ai.queue");
-const { sendPushToUser } = require("../services/push.service");
 
 // @desc    Create new complaint
 // @route   POST /api/complaints
@@ -84,17 +83,6 @@ exports.createComplaint = async (req, res, next) => {
     // Enqueue AI processing — runs in background, does not block the response.
     // The worker will update category/priority/sentiment and re-dispatch if needed.
     await enqueueAI(complaint._id, title, description || "");
-
-    // Send push notification to the user
-    if (complaint.userId) {
-      sendPushToUser(complaint.userId, {
-        title: "✅ Complaint Registered – RailMadad",
-        body: `Your complaint "${complaint.title}" has been filed. PNR: ${complaint.pnrNumber}`,
-        icon: "/train-icon.svg",
-        badge: "/train-icon.svg",
-        url: "/track-complaint",
-      });
-    }
 
     // Populate user details (only if linked to a user)
     if (complaint.userId) {
@@ -463,17 +451,6 @@ exports.closeComplaint = async (req, res, next) => {
     });
 
     await complaint.save();
-
-    // Notify user their complaint is now closed
-    if (complaint.userId) {
-      sendPushToUser(complaint.userId, {
-        title: "✅ Complaint Closed – RailMadad",
-        body: `Your complaint "${complaint.title}" has been closed. Thank you for your feedback!`,
-        icon: "/train-icon.svg",
-        badge: "/train-icon.svg",
-        url: "/track-complaint",
-      });
-    }
 
     res.status(200).json({
       success: true,

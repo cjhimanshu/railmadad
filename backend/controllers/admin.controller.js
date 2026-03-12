@@ -1,7 +1,6 @@
 const Complaint = require("../models/Complaint");
 const User = require("../models/User");
 const ControlUnitDispatch = require("../models/ControlUnitDispatch");
-const { sendPushToUser } = require("../services/push.service");
 
 // ── Simple in-memory analytics cache ─────────────────────────────────────────────────
 const analyticsCache = { data: null, lastUpdated: 0, TTL: 5 * 60 * 1000 }; // 5-minute TTL
@@ -157,19 +156,6 @@ exports.updateComplaintStatus = async (req, res, next) => {
           body: `Your complaint "${complaint.title}" has been rejected. Contact support for details.`,
         },
       };
-      const msg =
-        pushMessages[complaint.trackingStatus] ||
-        pushMessages[complaint.status];
-      if (msg) {
-        sendPushToUser(complaint.userId, {
-          ...msg,
-          icon: "/train-icon.svg",
-          badge: "/train-icon.svg",
-          url: "/track-complaint",
-        });
-      }
-    }
-
     res.status(200).json({
       success: true,
       message: "Complaint updated successfully",
@@ -218,17 +204,6 @@ exports.markAuthorityDone = async (req, res, next) => {
 
     await complaint.save();
     await complaint.populate("userId", "name email phone");
-
-    // Push notification: authority has acted
-    if (complaint.userId) {
-      sendPushToUser(complaint.userId, {
-        title: "🔧 Authority Has Taken Action – RailMadad",
-        body: `Action has been taken on your complaint "${complaint.title}". Please review and confirm resolution.`,
-        icon: "/train-icon.svg",
-        badge: "/train-icon.svg",
-        url: "/track-complaint",
-      });
-    }
 
     res.status(200).json({
       success: true,

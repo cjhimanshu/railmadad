@@ -36,10 +36,6 @@ const userSchema = new mongoose.Schema(
       unique: true,
       sparse: true, // allows multiple null — only enforces uniqueness on non-null values
     },
-    isOtpUser: {
-      type: Boolean,
-      default: false, // true for accounts auto-created via OTP login
-    },
     isActive: {
       type: Boolean,
       default: true,
@@ -50,13 +46,6 @@ const userSchema = new mongoose.Schema(
     },
     resetPasswordToken: String,
     resetPasswordExpire: Date,
-
-    // ─── FCM registration tokens (one per device/browser) ────────────────────
-    fcmTokens: {
-      type: [String],
-      default: [],
-      select: false,
-    },
   },
   {
     timestamps: true,

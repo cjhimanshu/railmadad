@@ -4,7 +4,6 @@ const crypto = require("crypto");
 const { Resend } = require("resend");
 const User = require("../models/User");
 const Complaint = require("../models/Complaint");
-const OtpModel = require("../models/Otp");
 
 // ─── Resend email helper ──────────────────────────────────────────────────────
 const resend = new Resend(process.env.RESEND_API_KEY);

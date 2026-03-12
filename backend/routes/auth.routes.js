@@ -8,8 +8,6 @@ const {
   getMe,
   forgotPassword,
   resetPassword,
-  sendOtp,
-  verifyOtp,
 } = require("../controllers/auth.controller");
 const { protect } = require("../middleware/auth.middleware");
 const validate = require("../middleware/validation.middleware");
@@ -65,9 +63,5 @@ router.post(
 router.get("/me", protect, getMe);
 router.post("/forgot-password", forgotPassword);
 router.put("/reset-password/:token", resetPassword);
-
-// OTP login routes
-router.post("/send-otp", sendOtp);
-router.post("/verify-otp", verifyOtp);
 
 module.exports = router;

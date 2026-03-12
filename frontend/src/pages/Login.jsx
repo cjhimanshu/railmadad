@@ -10,25 +10,11 @@ import {
   FaShieldAlt,
   FaFileAlt,
   FaArrowRight,
-  FaMobileAlt,
-  FaKeyboard,
-  FaSpinner,
 } from "react-icons/fa";
 
 const Login = () => {
-  // ── Active tab: "password" | "otp" ─────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState("password");
-
-  // ── Password login state ────────────────────────────────────────────────────
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
-
-  // ── OTP login state ─────────────────────────────────────────────────────────
-  const [otpEmail, setOtpEmail] = useState("");
-  const [otpCode, setOtpCode] = useState("");
-  const [otpStep, setOtpStep] = useState(1); // 1 = enter email, 2 = enter OTP
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [resendTimer, setResendTimer] = useState(0);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,8 +31,7 @@ const Login = () => {
     }
   };
 
-  // ── Password login submit ───────────────────────────────────────────────────
-  const handlePasswordLogin = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
@@ -69,65 +54,6 @@ const Login = () => {
       toast.error(msg);
     } finally {
       setLoading(false);
-    }
-  };
-
-  // ── OTP: send OTP ───────────────────────────────────────────────────────────
-  const handleSendOtp = async (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(otpEmail.trim())) {
-      toast.error("Please enter a valid email address");
-      return;
-    }
-    setOtpLoading(true);
-    try {
-      await api.post("/auth/send-otp", { email: otpEmail.trim() });
-      toast.success("OTP sent to your email!");
-      setOtpStep(2);
-      setResendTimer(30);
-      const interval = setInterval(() => {
-        setResendTimer((t) => {
-          if (t <= 1) {
-            clearInterval(interval);
-            return 0;
-          }
-          return t - 1;
-        });
-      }, 1000);
-    } catch (error) {
-      const msg =
-        error.response?.data?.message ||
-        "Failed to send OTP. Please try again.";
-      toast.error(msg);
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
-  // ── OTP: verify OTP ─────────────────────────────────────────────────────────
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    if (!otpCode.trim() || otpCode.trim().length !== 6) {
-      toast.error("Please enter the 6-digit OTP");
-      return;
-    }
-    setOtpLoading(true);
-    try {
-      const response = await api.post("/auth/verify-otp", {
-        email: otpEmail.trim(),
-        otp: otpCode.trim(),
-      });
-      const { user, token } = response.data.data;
-      login(user, token);
-      toast.success("OTP verified! Logged in successfully.");
-      goToAfterLogin(user.role);
-    } catch (error) {
-      const msg =
-        error.response?.data?.message ||
-        "OTP verification failed. Please try again.";
-      toast.error(msg);
-    } finally {
-      setOtpLoading(false);
     }
   };
 
@@ -182,252 +108,63 @@ const Login = () => {
             Login to Your Account
           </h2>
 
-          {/* ── Tab Switcher ─────────────────────────────────────────────────── */}
-          <div className="flex rounded-xl bg-gray-100 p-1 mb-6">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab("password");
-                setOtpStep(1);
-                setOtpCode("");
-              }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-all ${
-                activeTab === "password"
-                  ? "bg-white text-railway-blue shadow"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              <FaLock className="text-xs" />
-              Password Login
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab("otp");
-                setOtpStep(1);
-                setOtpCode("");
-              }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-all ${
-                activeTab === "otp"
-                  ? "bg-white text-green-600 shadow"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              <FaMobileAlt className="text-xs" />
-              Login with OTP
-            </button>
-          </div>
-
-          {/* ══════════════════════════════════════════════════════════════════ */}
-          {/* PASSWORD LOGIN TAB                                                 */}
-          {/* ══════════════════════════════════════════════════════════════════ */}
-          {activeTab === "password" && (
-            <form onSubmit={handlePasswordLogin} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Email
-                </label>
-                <div className="relative">
-                  <FaEnvelope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    className="input-field pl-10"
-                    placeholder="your@email.com"
-                    required
-                  />
-                </div>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Email
+              </label>
+              <div className="relative">
+                <FaEnvelope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                  className="input-field pl-10"
+                  placeholder="your@email.com"
+                  required
+                />
               </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Password
-                  </label>
-                  <Link
-                    to="/forgot-password"
-                    className="text-xs text-railway-blue hover:underline font-medium"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
-                <div className="relative">
-                  <FaLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="password"
-                    name="password"
-                    value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    className="input-field pl-10"
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn-primary w-full"
-              >
-                {loading ? "Logging in..." : "Login & Track My Complaint"}
-              </button>
-            </form>
-          )}
-
-          {/* ══════════════════════════════════════════════════════════════════ */}
-          {/* OTP LOGIN TAB                                                      */}
-          {/* ══════════════════════════════════════════════════════════════════ */}
-          {activeTab === "otp" && (
-            <div className="space-y-5">
-              {/* Step indicators */}
-              <div className="flex items-center gap-2 text-xs mb-2">
-                <div
-                  className={`flex items-center gap-1.5 font-semibold ${otpStep === 1 ? "text-green-600" : "text-gray-400"}`}
-                >
-                  <span
-                    className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs ${otpStep === 1 ? "bg-green-500" : "bg-gray-300"}`}
-                  >
-                    1
-                  </span>
-                  Enter Email
-                </div>
-                <div className="flex-1 border-t border-dashed border-gray-300" />
-                <div
-                  className={`flex items-center gap-1.5 font-semibold ${otpStep === 2 ? "text-green-600" : "text-gray-400"}`}
-                >
-                  <span
-                    className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs ${otpStep === 2 ? "bg-green-500" : "bg-gray-300"}`}
-                  >
-                    2
-                  </span>
-                  Enter OTP
-                </div>
-              </div>
-
-              {/* ── Step 1: Enter email address ───────────────────────────── */}
-              {otpStep === 1 && (
-                <form onSubmit={handleSendOtp} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Email Address
-                    </label>
-                    <div className="relative">
-                      <FaEnvelope className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="email"
-                        value={otpEmail}
-                        onChange={(e) => setOtpEmail(e.target.value)}
-                        className="input-field pl-10"
-                        placeholder="you@example.com"
-                        required
-                        autoFocus
-                      />
-                    </div>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Enter the email address you used when filing a complaint
-                    </p>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={otpLoading || !otpEmail.trim()}
-                    className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white font-bold py-3 px-4 rounded-xl transition-all"
-                  >
-                    {otpLoading ? (
-                      <>
-                        <FaSpinner className="animate-spin" /> Sending OTP…
-                      </>
-                    ) : (
-                      <>
-                        <FaEnvelope /> Send OTP
-                      </>
-                    )}
-                  </button>
-                </form>
-              )}
-
-              {/* ── Step 2: Enter OTP ────────────────────────────────────────── */}
-              {otpStep === 2 && (
-                <form onSubmit={handleVerifyOtp} className="space-y-4">
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-start gap-2">
-                    <FaEnvelope className="mt-0.5 flex-shrink-0" />
-                    <span>
-                      OTP sent to <strong>{otpEmail}</strong>
-                    </span>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Enter 6-digit OTP
-                    </label>
-                    <div className="relative">
-                      <FaKeyboard className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="tel"
-                        value={otpCode}
-                        onChange={(e) =>
-                          setOtpCode(
-                            e.target.value.replace(/\D/g, "").slice(0, 6),
-                          )
-                        }
-                        className="input-field pl-10 font-mono tracking-[0.4em] text-xl text-center"
-                        placeholder="• • • • • •"
-                        maxLength={6}
-                        required
-                        autoFocus
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={otpLoading || otpCode.length !== 6}
-                    className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white font-bold py-3 px-4 rounded-xl transition-all"
-                  >
-                    {otpLoading ? (
-                      <>
-                        <FaSpinner className="animate-spin" /> Verifying…
-                      </>
-                    ) : (
-                      "Verify OTP & Login"
-                    )}
-                  </button>
-
-                  <div className="flex items-center justify-between text-xs text-gray-500 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOtpStep(1);
-                        setOtpCode("");
-                      }}
-                      className="hover:text-railway-blue hover:underline"
-                    >
-                      ← Change email
-                    </button>
-                    {resendTimer > 0 ? (
-                      <span>Resend in {resendTimer}s</span>
-                    ) : (
-                      <button
-                        type="button"
-                        className="hover:text-green-600 hover:underline font-medium"
-                        onClick={handleSendOtp}
-                        disabled={otpLoading}
-                      >
-                        Resend OTP
-                      </button>
-                    )}
-                  </div>
-                </form>
-              )}
             </div>
-          )}
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-semibold text-gray-700">
+                  Password
+                </label>
+                <Link
+                  to="/forgot-password"
+                  className="text-xs text-railway-blue hover:underline font-medium"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <div className="relative">
+                <FaLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                  className="input-field pl-10"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full"
+            >
+              {loading ? "Logging in..." : "Login & Track My Complaint"}
+            </button>
+          </form>
 
           {/* ── Register & Admin links ──────────────────────────────────────── */}
           <p className="mt-6 text-center text-gray-600">

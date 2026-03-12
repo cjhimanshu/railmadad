@@ -1,6 +1,5 @@
 import { createContext, useState, useContext, useEffect } from "react";
 import api from "../utils/api";
-import { registerPush, unregisterPush } from "../utils/push";
 
 const AuthContext = createContext();
 
@@ -25,10 +24,6 @@ export const AuthProvider = ({ children }) => {
       try {
         const parsed = JSON.parse(savedUser);
         setUser(parsed);
-        // Re-register push in case subscription expired or device changed
-        if (parsed.role !== "admin") {
-          registerPush();
-        }
       } catch {
         // Corrupted storage — clear and fall through as logged-out
         localStorage.removeItem("token");
@@ -42,14 +37,9 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(userData));
     setUser(userData);
-    // Subscribe to push after login (non-admin users only)
-    if (userData.role !== "admin") {
-      registerPush();
-    }
   };
 
   const logout = () => {
-    unregisterPush();
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
