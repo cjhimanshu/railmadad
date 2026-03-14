@@ -94,7 +94,11 @@ const ComplaintForm = ({ onSubmitSuccess }) => {
       const msg =
         error.response?.data?.message ||
         error.response?.data?.errors?.[0]?.message ||
-        "Something went wrong. Please try again.";
+        (error.code === "ECONNABORTED"
+          ? "Server is waking up. Please try again in a few seconds."
+          : error.message === "Network Error"
+            ? "Cannot reach server. Please check your connection and try again."
+            : "Something went wrong. Please try again.");
       setErrorMsg(msg);
     } finally {
       setLoading(false);

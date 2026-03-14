@@ -113,85 +113,86 @@ exports.createComplaint = async (req, res, next) => {
       await complaint.populate("userId", "name email");
     }
 
-    // ── Auto-create account + send password setup email for guest submissions ──
-    // If the user submitted without logging in, ensure they have an account so
-    // they can login to track their complaint. A password-setup link is sent.
-    if (!req.user && complaintData.contactEmail) {
-      try {
-        const cleanEmail = complaintData.contactEmail.toLowerCase();
-        let accountUser = await User.findOne({ email: cleanEmail });
-        let isNewAccount = false;
-
-        if (!accountUser) {
-          // Derive a readable name from the email prefix
-          const prefix = cleanEmail.split("@")[0].replace(/[._\-]/g, " ");
-          const name =
-            prefix.charAt(0).toUpperCase() + prefix.slice(1) || "User";
-          const tempPassword = await bcrypt.hash(
-            crypto.randomBytes(16).toString("hex"),
-            10,
-          );
-          accountUser = await User.create({
-            name,
-            email: cleanEmail,
-            password: tempPassword,
-          });
-          isNewAccount = true;
-        }
-
-        // Generate a 24-hour password-setup token
-        const setupToken = crypto.randomBytes(32).toString("hex");
-        accountUser.resetPasswordToken = crypto
-          .createHash("sha256")
-          .update(setupToken)
-          .digest("hex");
-        accountUser.resetPasswordExpire = Date.now() + 24 * 60 * 60 * 1000;
-        await accountUser.save({ validateBeforeSave: false });
-
-        const setupUrl = `${process.env.FRONTEND_URL}/reset-password/${setupToken}`;
-        const html = `
-          <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">
-            <div style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8);padding:28px 32px">
-              <h1 style="margin:0;color:#fff;font-size:22px">&#128646; RailMadad</h1>
-              <p style="margin:4px 0 0;color:#bfdbfe;font-size:14px">Railway Complaint Management System</p>
-            </div>
-            <div style="padding:32px">
-              <h2 style="color:#1e293b;margin-top:0">&#9989; Complaint Registered Successfully</h2>
-              <p style="color:#475569">Hi <strong>${accountUser.name}</strong>,</p>
-              <p style="color:#475569">Your complaint has been received and is being reviewed by the concerned railway authority.</p>
-              ${
-                isNewAccount
-                  ? `<p style="color:#475569">We've created a <strong>RailMadad account</strong> for you using this email. Set your password using the button below to login and track your complaint status in real time.</p>`
-                  : `<p style="color:#475569">Use the button below to set a new password and then login to track your complaint.</p>`
-              }
-              <div style="text-align:center;margin:28px 0">
-                <a href="${setupUrl}" style="background:#1d4ed8;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:15px">Set Password &amp; Track Complaint</a>
-              </div>
-              <p style="color:#94a3b8;font-size:12px;word-break:break-all">${setupUrl}</p>
-              <p style="color:#94a3b8;font-size:12px">This link expires in <strong>24 hours</strong>. If you didn't submit a complaint, you can safely ignore this email.</p>
-            </div>
-          </div>`;
-
-        await sendEmail({
-          email: cleanEmail,
-          subject: "RailMadad — Set Your Password to Track Your Complaint",
-          html,
-        });
-        // Link this complaint to the user account so it appears in their dashboard
-        await Complaint.findByIdAndUpdate(complaint._id, {
-          userId: accountUser._id,
-        });
-      } catch (accountErr) {
-        // Don't fail the complaint submission if account setup email fails
-        console.error("Auto account setup error:", accountErr.message);
-      }
-    }
-
     res.status(201).json({
       success: true,
       message: "Complaint submitted successfully",
       data: complaint,
     });
+
+    // Run account setup + email in background so API response is not blocked
+    if (!req.user && complaintData.contactEmail) {
+      const complaintId = complaint._id;
+      const cleanEmail = complaintData.contactEmail.toLowerCase();
+      setImmediate(async () => {
+        try {
+          let accountUser = await User.findOne({ email: cleanEmail });
+          let isNewAccount = false;
+
+          if (!accountUser) {
+            // Derive a readable name from the email prefix
+            const prefix = cleanEmail.split("@")[0].replace(/[._\-]/g, " ");
+            const name =
+              prefix.charAt(0).toUpperCase() + prefix.slice(1) || "User";
+            const tempPassword = await bcrypt.hash(
+              crypto.randomBytes(16).toString("hex"),
+              10,
+            );
+            accountUser = await User.create({
+              name,
+              email: cleanEmail,
+              password: tempPassword,
+            });
+            isNewAccount = true;
+          }
+
+          // Generate a 24-hour password-setup token
+          const setupToken = crypto.randomBytes(32).toString("hex");
+          accountUser.resetPasswordToken = crypto
+            .createHash("sha256")
+            .update(setupToken)
+            .digest("hex");
+          accountUser.resetPasswordExpire = Date.now() + 24 * 60 * 60 * 1000;
+          await accountUser.save({ validateBeforeSave: false });
+
+          const setupUrl = `${process.env.FRONTEND_URL}/reset-password/${setupToken}`;
+          const html = `
+            <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">
+              <div style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8);padding:28px 32px">
+                <h1 style="margin:0;color:#fff;font-size:22px">&#128646; RailMadad</h1>
+                <p style="margin:4px 0 0;color:#bfdbfe;font-size:14px">Railway Complaint Management System</p>
+              </div>
+              <div style="padding:32px">
+                <h2 style="color:#1e293b;margin-top:0">&#9989; Complaint Registered Successfully</h2>
+                <p style="color:#475569">Hi <strong>${accountUser.name}</strong>,</p>
+                <p style="color:#475569">Your complaint has been received and is being reviewed by the concerned railway authority.</p>
+                ${
+                  isNewAccount
+                    ? `<p style="color:#475569">We've created a <strong>RailMadad account</strong> for you using this email. Set your password using the button below to login and track your complaint status in real time.</p>`
+                    : `<p style="color:#475569">Use the button below to set a new password and then login to track your complaint.</p>`
+                }
+                <div style="text-align:center;margin:28px 0">
+                  <a href="${setupUrl}" style="background:#1d4ed8;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:15px">Set Password &amp; Track Complaint</a>
+                </div>
+                <p style="color:#94a3b8;font-size:12px;word-break:break-all">${setupUrl}</p>
+                <p style="color:#94a3b8;font-size:12px">This link expires in <strong>24 hours</strong>. If you didn't submit a complaint, you can safely ignore this email.</p>
+              </div>
+            </div>`;
+
+          await sendEmail({
+            email: cleanEmail,
+            subject: "RailMadad — Set Your Password to Track Your Complaint",
+            html,
+          });
+
+          // Link complaint to user account so it appears in dashboard
+          await Complaint.findByIdAndUpdate(complaintId, {
+            userId: accountUser._id,
+          });
+        } catch (accountErr) {
+          console.error("Auto account setup error:", accountErr.message);
+        }
+      });
+    }
   } catch (error) {
     next(error);
   }

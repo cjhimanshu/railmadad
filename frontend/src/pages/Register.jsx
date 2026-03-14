@@ -43,7 +43,11 @@ const Register = () => {
     } catch (error) {
       const msg =
         error.response?.data?.message ||
-        "Registration failed. Please try again.";
+        (error.code === "ECONNABORTED"
+          ? "Server took too long to respond. Please try again."
+          : error.message === "Network Error"
+            ? "Cannot reach server. Please ensure backend is running."
+            : "Registration failed. Please try again.");
       if (
         error.response?.status === 400 &&
         msg.toLowerCase().includes("already exists")

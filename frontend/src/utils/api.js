@@ -4,7 +4,8 @@ import { toast } from "react-toastify";
 // Create axios instance
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
-  timeout: 10000,
+  // Render free/starter instances can take 30-60s to wake on first request.
+  timeout: 60000,
   headers: {
     "Content-Type": "application/json",
   },
