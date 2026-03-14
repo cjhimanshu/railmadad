@@ -136,26 +136,6 @@ exports.updateComplaintStatus = async (req, res, next) => {
     await complaint.save();
     await complaint.populate("userId", "name email phone");
 
-    // Push notification to user on status change
-    if (complaint.userId) {
-      const pushMessages = {
-        sent_to_authority: {
-          title: "📋 Complaint Forwarded – RailMadad",
-          body: `Your complaint "${complaint.title}" has been forwarded to the concerned authority.`,
-        },
-        authority_taken_action: {
-          title: "🔧 Action Taken – RailMadad",
-          body: `The authority has taken action on your complaint "${complaint.title}".`,
-        },
-        resolved: {
-          title: "✅ Complaint Resolved – RailMadad",
-          body: `Your complaint "${complaint.title}" has been successfully resolved.`,
-        },
-        rejected: {
-          title: "❌ Complaint Rejected – RailMadad",
-          body: `Your complaint "${complaint.title}" has been rejected. Contact support for details.`,
-        },
-      };
     res.status(200).json({
       success: true,
       message: "Complaint updated successfully",

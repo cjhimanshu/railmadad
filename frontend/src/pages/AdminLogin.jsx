@@ -30,7 +30,13 @@ const AdminLogin = () => {
       toast.success("Welcome back, Admin!");
       navigate("/admin");
     } catch (err) {
-      const msg = err.response?.data?.message || "Login failed";
+      const msg =
+        err.response?.data?.message ||
+        (err.code === "ECONNABORTED"
+          ? "Server took too long to respond. Please try again."
+          : err.message === "Network Error"
+            ? "Cannot reach server. Please ensure backend is running."
+            : "Login failed");
       toast.error(msg);
     } finally {
       setLoading(false);

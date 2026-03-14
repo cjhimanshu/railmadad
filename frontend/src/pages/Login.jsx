@@ -42,7 +42,12 @@ const Login = () => {
       goToAfterLogin(user.role);
     } catch (error) {
       const msg =
-        error.response?.data?.message || "Login failed. Please try again.";
+        error.response?.data?.message ||
+        (error.code === "ECONNABORTED"
+          ? "Server took too long to respond. Please try again."
+          : error.message === "Network Error"
+            ? "Cannot reach server. Please ensure backend is running."
+            : "Login failed. Please try again.");
       if (
         error.response?.status === 403 &&
         msg.toLowerCase().includes("admin")
