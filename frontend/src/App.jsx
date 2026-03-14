@@ -8,65 +8,77 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Login from "./pages/Login";
-import AdminLogin from "./pages/AdminLogin";
-import Register from "./pages/Register";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import UserDashboard from "./pages/UserDashboard";
-import AdminDashboard from "./pages/AdminDashboard";
-import TrackComplaint from "./pages/TrackComplaint";
-import SubmitComplaint from "./pages/SubmitComplaint";
-import LandingPage from "./pages/LandingPage";
+import React, { Suspense, lazy } from "react";
+const Login = lazy(() => import("./pages/Login"));
+const AdminLogin = lazy(() => import("./pages/AdminLogin"));
+const Register = lazy(() => import("./pages/Register"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const UserDashboard = lazy(() => import("./pages/UserDashboard"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const TrackComplaint = lazy(() => import("./pages/TrackComplaint"));
+const SubmitComplaint = lazy(() => import("./pages/SubmitComplaint"));
+const LandingPage = lazy(() => import("./pages/LandingPage"));
 
 function App() {
   return (
     <AuthProvider>
       <Router>
         <div className="App">
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/admin-login" element={<AdminLogin />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password/:token" element={<ResetPassword />} />
-            <Route path="/submit" element={<SubmitComplaint />} />
+          <Suspense
+            fallback={
+              <div style={{ textAlign: "center", marginTop: "2rem" }}>
+                Loading...
+              </div>
+            }
+          >
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/admin-login" element={<AdminLogin />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route
+                path="/reset-password/:token"
+                element={<ResetPassword />}
+              />
+              <Route path="/submit" element={<SubmitComplaint />} />
 
-            {/* Protected: Track Status (requires login) */}
-            <Route
-              path="/track"
-              element={
-                <ProtectedRoute>
-                  <TrackComplaint />
-                </ProtectedRoute>
-              }
-            />
+              {/* Protected: Track Status (requires login) */}
+              <Route
+                path="/track"
+                element={
+                  <ProtectedRoute>
+                    <TrackComplaint />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Protected User Routes */}
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <UserDashboard />
-                </ProtectedRoute>
-              }
-            />
+              {/* Protected User Routes */}
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <UserDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Protected Admin Routes */}
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute adminOnly={true}>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
+              {/* Protected Admin Routes */}
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute adminOnly={true}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Default Route */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+              {/* Default Route */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
 
           {/* Toast Notifications */}
           <ToastContainer

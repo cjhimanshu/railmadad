@@ -34,12 +34,9 @@ const Register = () => {
 
     try {
       const { confirmPassword, ...registerData } = formData;
-      const response = await api.post("/auth/register", registerData);
-      const { user, token } = response.data.data;
-
-      login(user, token);
-      toast.success("Registration successful!");
-      navigate("/dashboard");
+      await api.post("/auth/register", registerData);
+      toast.success("Registration successful! Please log in.");
+      navigate("/login");
     } catch (error) {
       const msg =
         error.response?.data?.message ||
