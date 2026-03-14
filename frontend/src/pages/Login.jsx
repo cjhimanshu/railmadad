@@ -111,19 +111,20 @@ const Login = () => {
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Email
+                Email or Mobile Number
               </label>
               <div className="relative">
                 <FaEnvelope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
-                  type="email"
+                  type="text"
                   name="email"
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
                   className="input-field pl-10"
-                  placeholder="your@email.com"
+                  placeholder="your@email.com or 9876543210"
+                  autoComplete="username"
                   required
                 />
               </div>
