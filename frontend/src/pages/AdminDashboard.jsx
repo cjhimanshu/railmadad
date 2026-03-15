@@ -644,6 +644,7 @@ const AdminDashboard = () => {
             <ComplaintManagement
               onUpdate={fetchData}
               initialFilter={statFilter}
+              compact={true}
             />
           </div>
         )}

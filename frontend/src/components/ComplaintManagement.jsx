@@ -129,7 +129,7 @@ const ClosureStatus = ({ c }) => {
 };
 
 // ─── Single Complaint Card ────────────────────────────────────────────────────
-const ComplaintCard = ({ complaint, onRefresh }) => {
+const ComplaintCard = ({ complaint, onRefresh, compact }) => {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [markingDone, setMarkingDone] = useState(false);
@@ -221,48 +221,61 @@ const ComplaintCard = ({ complaint, onRefresh }) => {
     <div
       className={`bg-white rounded-xl shadow-sm border border-gray-100 border-l-4 ${borderColor} overflow-hidden`}
     >
-      {/* Header */}
+      {/* Header: Only show email if compact, else show full header */}
       <div
         className="p-4 cursor-pointer select-none"
         onClick={() => setExpanded(!expanded)}
       >
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2 mb-1">
-              <h4 className="font-bold text-railway-dark">{complaint.title}</h4>
-              {complaint.closureBlocked && (
-                <span className="flex items-center gap-1 text-xs bg-red-100 text-red-700 border border-red-300 rounded-full px-2 py-0.5 animate-pulse">
-                  <FaLock className="text-xs" /> Blocked
-                </span>
-              )}
-              {complaint.authorityMarkedDone &&
-                !isResolved &&
-                !complaint.closureBlocked && (
-                  <span className="text-xs bg-blue-100 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5">
-                    ⚙ Action Taken
+            {compact ? (
+              <span className="font-semibold text-blue-700 text-base flex items-center gap-2">
+                <FaEnvelope className="text-blue-400 text-xs" />
+                {complaint.userId?.email ||
+                  complaint.contactEmail ||
+                  "(no email)"}
+              </span>
+            ) : (
+              <div>
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <h4 className="font-bold text-railway-dark">
+                    {complaint.title}
+                  </h4>
+                  {complaint.closureBlocked && (
+                    <span className="flex items-center gap-1 text-xs bg-red-100 text-red-700 border border-red-300 rounded-full px-2 py-0.5 animate-pulse">
+                      <FaLock className="text-xs" /> Blocked
+                    </span>
+                  )}
+                  {complaint.authorityMarkedDone &&
+                    !isResolved &&
+                    !complaint.closureBlocked && (
+                      <span className="text-xs bg-blue-100 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5">
+                        ⚙ Action Taken
+                      </span>
+                    )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <span
+                    className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${STATUS_STYLES[complaint.status]}`}
+                  >
+                    {complaint.status.replace("_", " ").toUpperCase()}
                   </span>
-                )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <span
-                className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${STATUS_STYLES[complaint.status]}`}
-              >
-                {complaint.status.replace("_", " ").toUpperCase()}
-              </span>
-              <span
-                className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${PRIORITY_STYLES[complaint.priority]}`}
-              >
-                {complaint.priority?.toUpperCase()}
-              </span>
-              <span className="text-xs bg-purple-100 text-purple-800 border border-purple-200 rounded-full px-2 py-0.5">
-                {complaint.category?.replace(/_/g, " ")}
-              </span>
-              {complaint.pnrNumber && (
-                <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5 font-mono">
-                  🎫 {complaint.pnrNumber}
-                </span>
-              )}
-            </div>
+                  <span
+                    className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${PRIORITY_STYLES[complaint.priority]}`}
+                  >
+                    {complaint.priority?.toUpperCase()}
+                  </span>
+                  <span className="text-xs bg-purple-100 text-purple-800 border border-purple-200 rounded-full px-2 py-0.5">
+                    {complaint.category?.replace(/_/g, " ")}
+                  </span>
+                  {complaint.pnrNumber && (
+                    <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5 font-mono">
+                      🎫 {complaint.pnrNumber}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">
             <span className="hidden md:block text-xs text-gray-400">
@@ -612,7 +625,7 @@ const ComplaintCard = ({ complaint, onRefresh }) => {
 };
 
 // ─── Main Panel ───────────────────────────────────────────────────────────────
-const ComplaintManagement = ({ onUpdate, initialFilter }) => {
+const ComplaintManagement = ({ onUpdate, initialFilter, compact }) => {
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("all");
@@ -840,6 +853,7 @@ const ComplaintManagement = ({ onUpdate, initialFilter }) => {
                   key={c._id}
                   complaint={c}
                   onRefresh={handleRefresh}
+                  compact={compact}
                 />
               ))}
             </div>
