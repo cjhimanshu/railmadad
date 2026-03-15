@@ -1,22 +1,22 @@
 import { useState } from "react";
-import api from "../utils/api";
+import api, { submitComplaint } from "../utils/api";
 import { toast } from "react-toastify";
-import {
-  FaUpload,
-  FaSpinner,
-  FaRobot,
-  FaTicketAlt,
-  FaPhone,
-  FaEnvelope,
-  FaCheckCircle,
-  FaTag,
-} from "react-icons/fa";
-
-const ComplaintForm = ({ onSubmitSuccess }) => {
-  const [formData, setFormData] = useState({
-    title: "",
-    category: "",
-    pnrNumber: "",
+    try {
+      const complaint = await submitComplaint(formDataToSend);
+      setTimeout(() => onSubmitSuccess(complaint), 2500);
+    } catch (error) {
+      let msg = "Error submitting complaint. Please try again.";
+      if (error.response?.data?.message) {
+        msg = error.response.data.message;
+      } else if (error.code === "ECONNABORTED") {
+        msg = "Server took too long to respond. Please try again later.";
+      } else if (error.message === "Network Error") {
+        msg = "Cannot reach server. Please check your internet connection or try again later.";
+      }
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
     contactMobile: "",
     contactEmail: "",
   });

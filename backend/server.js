@@ -1,6 +1,8 @@
+// Load environment variables from .env file
 require("dotenv").config();
 
 // ── Clustering: one worker per CPU in production ──────────────────────────────
+// This allows the server to use all CPU cores in production for better performance.
 const cluster = require("cluster");
 const os = require("os");
 
@@ -17,6 +19,7 @@ if (process.env.NODE_ENV === "production" && cluster.isPrimary) {
   return; // Primary only manages workers; workers run the actual server
 }
 
+// Import core dependencies
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
@@ -30,6 +33,7 @@ const { startControlUnit } = require("./services/controlUnit.service");
 const { initQueue } = require("./queues/ai.queue");
 
 // Seed the fixed admin account on startup
+// Ensures there is always an admin user with credentials from .env
 async function seedAdmin() {
   try {
     const User = require("./models/User");
@@ -81,13 +85,13 @@ const authRoutes = require("./routes/auth.routes");
 const complaintRoutes = require("./routes/complaint.routes");
 const adminRoutes = require("./routes/admin.routes");
 
-// Initialize app
+// Initialize Express app
 const app = express();
 
 // Trust Render's proxy (required for express-rate-limit behind a reverse proxy)
 app.set("trust proxy", 1);
 
-// Connect to database
+// Connect to MongoDB database
 connectDB().then(async () => {
   // Seed fixed admin account
   await seedAdmin();
@@ -189,6 +193,7 @@ const server = app.listen(PORT, () => {
   );
 });
 
+// Handle server errors (e.g., port in use)
 server.on("error", (err) => {
   if (err.code === "EADDRINUSE") {
     console.error(
@@ -206,4 +211,5 @@ server.on("error", (err) => {
   }
 });
 
+// Export app for testing or further integration
 module.exports = app;

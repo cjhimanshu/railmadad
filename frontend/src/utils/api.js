@@ -1,3 +1,8 @@
+// Reusable function to submit a complaint
+export async function submitComplaint(formData) {
+  const response = await api.post("/complaints", formData);
+  return response.data.data;
+}
 import axios from "axios";
 import { toast } from "react-toastify";
 
