@@ -1,71 +1,112 @@
-# RailMadad — AI-Integrated Railway Complaint Management System
+# RailMadad — Railway Complaint Management, Made Simple
 
-A full-stack MERN application that streamlines railway complaint management with AI-powered categorization, priority suggestion, sentiment analysis, and an automated guest-to-user account flow.
+Welcome to RailMadad! This project is all about making it easier for railway passengers to submit complaints and for admins to manage and resolve them efficiently. We use a modern MERN stack (MongoDB, Express, React, Node.js) and sprinkle in some AI to help categorize and prioritize complaints.
 
-**Live:** [railmadad-gamma.vercel.app](https://railmadad-gamma.vercel.app)
+**Live Demo:**  
+[railmadad-gamma.vercel.app](https://railmadad-gamma.vercel.app)
 
 ---
 
-## Features
+## What Can You Do Here?
 
-### For Passengers (Guest Flow)
+### For Passengers
 
-- Submit complaints without creating an account
-- Email address required — used to auto-create an account and track complaints
-- After submission, a **password setup email** is sent automatically
-- Set password via the link → log in → view all your complaints in the dashboard
+- **No account? No problem!** You can submit a complaint with just your email.
+- After you submit, you’ll get a password setup link in your inbox. Set your password, log in, and you’ll see all your complaints in one place.
+- Track the progress of your complaint from start to finish.
 
 ### For Registered Users
 
-- Email + password authentication (JWT)
-- View full complaint history and real-time status
-- Track complaint progress from submission to resolution
+- Log in with your email and password.
+- See your full complaint history and real-time updates.
 
 ### For Admins
 
-- Separate admin login at `/admin-login`
-- View and filter all complaints across the system
-- Update complaint status and assign departments
-- Add internal admin notes
-- Analytics dashboard with interactive charts (Recharts)
-- Monitor resolution times and category trends
+- Special admin login at `/admin-login`.
+- View, filter, and manage all complaints.
+- Assign departments, update statuses, and add internal notes.
+- See analytics and trends with interactive charts.
 
-### AI Features
+### How Does AI Help?
 
-- **Auto-categorization** — Hugging Face zero-shot classification (`facebook/bart-large-mnli`)
-- **Sentiment analysis** — Detects complaint tone (`distilbert-base-uncased-finetuned-sst-2-english`)
-- **Priority suggestion** — Based on keywords and sentiment score
-- **Suggested response** — AI-generated template response for admins
+- Automatically categorizes complaints (using Hugging Face models).
+- Suggests priority and even drafts a response for admins.
+- Analyzes sentiment to help spot urgent or negative feedback.
 
 ---
 
-## Tech Stack
+## Tech Stack (What’s Under the Hood?)
 
-### Backend
+**Backend:**
 
-| Technology                 | Purpose                                                |
-| -------------------------- | ------------------------------------------------------ |
-| Node.js + Express.js       | REST API server                                        |
-| MongoDB + Mongoose         | Database                                               |
-| JWT + bcryptjs             | Authentication & password hashing                      |
-| Cloudinary                 | Image uploads                                          |
-| Hugging Face Inference API | AI categorization & sentiment                          |
-| Resend                     | Transactional emails (password setup, forgot password) |
-| BullMQ + ioredis           | Background AI processing queue                         |
-| Multer                     | File upload handling                                   |
-| express-rate-limit         | API rate limiting                                      |
-| node-cron                  | Scheduled automation tasks                             |
+- Node.js + Express (API server)
+- MongoDB + Mongoose (database)
+- JWT + bcryptjs (authentication)
+- Cloudinary (image uploads)
+- Hugging Face API (AI magic)
+- Resend (emails)
+- BullMQ + Redis (background jobs)
+- Multer (file uploads)
+- express-rate-limit (security)
+- node-cron (scheduled tasks)
 
-### Frontend
+**Frontend:**
 
-| Technology      | Purpose                   |
-| --------------- | ------------------------- |
-| React 18 + Vite | UI framework & build tool |
-| Tailwind CSS    | Styling                   |
-| React Router v6 | Client-side routing       |
-| Recharts        | Analytics charts          |
-| Axios           | HTTP client               |
-| React Toastify  | Notifications             |
+- React 18 + Vite (UI and build tool)
+- Tailwind CSS (styling)
+- React Router v6 (navigation)
+- Recharts (charts)
+- Axios (API calls)
+- React Toastify (notifications)
+
+---
+
+## Getting Started (Local Setup)
+
+1. **Clone this repo:**
+   `bash
+ git clone https://github.com/yourusername/railmadad.git
+ cd railmadad
+ `
+
+2. **Install dependencies:**
+   `bash
+ cd backend && npm install
+ cd ../frontend && npm install
+ `
+
+3. **Set up your environment variables:** - Copy `.env.example` to `.env` in both `backend/` and `frontend/`. - Fill in your database, API keys, etc.
+
+4. **Start the backend:**
+   `bash
+ cd backend
+ npm start
+ `
+
+5. **Start the frontend:**
+   `bash
+ cd frontend
+ npm run dev
+ `
+
+6. **Open your browser:**  
+   Go to [http://localhost:5173](http://localhost:5173)
+
+---
+
+## Why This Project?
+
+We built RailMadad to make it easier for passengers to get their voices heard and for railway staff to respond quickly and efficiently. The AI features help sort and prioritize complaints, so nothing important slips through the cracks.
+
+---
+
+## Want to Contribute?
+
+We’d love your help! Whether you’re fixing a bug, adding a feature, or improving the docs, your contribution is welcome. Just fork the repo, make your changes, and open a pull request.
+
+---
+
+If you have any questions or ideas, feel free to open an issue or reach out. Thanks for checking out RailMadad!
 
 ---
 
@@ -130,100 +171,6 @@ npm run dev
 ```
 
 The frontend reads the backend URL from `VITE_API_URL` (defaults to `http://localhost:5000/api` if not set).
-
----
-
-## API Reference
-
-### Auth
-
-| Method | Endpoint                          | Access    | Description               |
-| ------ | --------------------------------- | --------- | ------------------------- |
-| POST   | `/api/auth/register`              | Public    | Register new user         |
-| POST   | `/api/auth/login`                 | Public    | Login (email + password)  |
-| GET    | `/api/auth/me`                    | Protected | Get current user          |
-| POST   | `/api/auth/forgot-password`       | Public    | Send password reset email |
-| POST   | `/api/auth/reset-password/:token` | Public    | Reset password via token  |
-| POST   | `/api/auth/change-password`       | Protected | Change password           |
-
-### Complaints
-
-| Method | Endpoint              | Access    | Description                           |
-| ------ | --------------------- | --------- | ------------------------------------- |
-| POST   | `/api/complaints`     | Public    | Submit complaint (guest or logged-in) |
-| GET    | `/api/complaints`     | Protected | Get current user's complaints         |
-| GET    | `/api/complaints/:id` | Protected | Get single complaint                  |
-
-### Admin
-
-| Method | Endpoint                           | Access | Description                       |
-| ------ | ---------------------------------- | ------ | --------------------------------- |
-| GET    | `/api/admin/complaints`            | Admin  | Get all complaints with filters   |
-| PUT    | `/api/admin/complaints/:id/status` | Admin  | Update status / assign department |
-| GET    | `/api/admin/analytics`             | Admin  | Full analytics data               |
-| GET    | `/api/admin/stats`                 | Admin  | Quick stats summary               |
-
----
-
-## Guest Complaint Flow
-
-```
-Guest fills form (email required)
-        ↓
-Complaint saved → auto-account created for email
-        ↓
-Password setup email sent via Resend (24hr link)
-        ↓
-User clicks link → sets password on /reset-password
-        ↓
-Logs in → complaint appears in dashboard
-```
-
----
-
-## Database Schema (summary)
-
-### Users
-
-```
-name, email (unique), password (hashed), role (user/admin),
-phone, isActive, resetPasswordToken, resetPasswordExpire, timestamps
-```
-
-### Complaints
-
-```
-userId (ref: User), title, description, category, priority,
-status, contactEmail, contactMobile, imageURL, trainNumber,
-pnrNumber, sentiment, aiSuggestions { suggestedCategory,
-suggestedPriority, suggestedResponse, confidence },
-assignedDepartment, adminNotes, resolvedAt, timestamps
-```
-
----
-
-## Deployment
-
-### Frontend — Vercel
-
-- Root directory: `frontend`
-- Build command: `npm run build`
-- Output directory: `dist`
-- Environment variable: `VITE_API_URL=https://your-backend.onrender.com/api`
-
-### Backend — Render
-
-- Root directory: `backend`
-- Start command: `node server.js`
-- Set all environment variables from the `.env` section above
-
-### Database — MongoDB Atlas
-
-- Create a free M0 cluster
-- Add `0.0.0.0/0` to IP whitelist (or your Render IP)
-- Copy the connection string to `MONGODB_URI`
-
-> **Note:** On Render's free tier, the backend sleeps after 15 minutes of inactivity. The first request after sleep may take 30–60 seconds. Upgrade to Render Starter or use a keep-alive service (e.g. UptimeRobot) to avoid this.
 
 ---
 
