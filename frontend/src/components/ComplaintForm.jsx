@@ -1,25 +1,30 @@
 import { useState } from "react";
-import api, { submitComplaint } from "../utils/api";
 import { toast } from "react-toastify";
-    try {
-      const complaint = await submitComplaint(formDataToSend);
-      setTimeout(() => onSubmitSuccess(complaint), 2500);
-    } catch (error) {
-      let msg = "Error submitting complaint. Please try again.";
-      if (error.response?.data?.message) {
-        msg = error.response.data.message;
-      } else if (error.code === "ECONNABORTED") {
-        msg = "Server took too long to respond. Please try again later.";
-      } else if (error.message === "Network Error") {
-        msg = "Cannot reach server. Please check your internet connection or try again later.";
-      }
-      toast.error(msg);
-    } finally {
-      setSubmitting(false);
-    }
-    contactMobile: "",
-    contactEmail: "",
-  });
+import {
+  FaCheckCircle,
+  FaEnvelope,
+  FaPhone,
+  FaRobot,
+  FaSpinner,
+  FaTag,
+  FaTicketAlt,
+  FaTrain,
+  FaUpload,
+} from "react-icons/fa";
+import { submitComplaint } from "../utils/api";
+
+const initialFormData = {
+  title: "",
+  description: "",
+  category: "",
+  pnrNumber: "",
+  trainNumber: "",
+  contactMobile: "",
+  contactEmail: "",
+};
+
+const ComplaintForm = ({ onSubmitSuccess }) => {
+  const [formData, setFormData] = useState(initialFormData);
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -27,79 +32,71 @@ import { toast } from "react-toastify";
   const [showSuccess, setShowSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((current) => ({
+      ...current,
+      [name]: value,
+    }));
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("Image size should be less than 5MB");
-        return;
-      }
-      setImage(file);
-      setImagePreview(URL.createObjectURL(file));
+  const handleImageChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
     }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size should be less than 5MB.");
+      return;
+    }
+
+    setImage(file);
+    setImagePreview(URL.createObjectURL(file));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setLoading(true);
     setErrorMsg("");
 
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append("title", formData.title);
-      formDataToSend.append("category", formData.category);
-      if (formData.pnrNumber.trim()) {
-        formDataToSend.append("pnrNumber", formData.pnrNumber.trim());
+      const payload = new FormData();
+      payload.append("title", formData.title.trim());
+      payload.append("description", formData.description.trim());
+      payload.append("category", formData.category);
+      payload.append("pnrNumber", formData.pnrNumber.trim());
+      if (formData.trainNumber.trim()) {
+        payload.append("trainNumber", formData.trainNumber.trim());
       }
-      if (formData.contactMobile.trim()) {
-        formDataToSend.append("contactMobile", formData.contactMobile.trim());
-      }
-      formDataToSend.append("contactEmail", formData.contactEmail.trim());
+      payload.append("contactMobile", formData.contactMobile.trim());
+      payload.append("contactEmail", formData.contactEmail.trim());
       if (image) {
-        formDataToSend.append("image", image);
+        payload.append("image", image);
       }
 
-      const response = await api.post("/complaints", formDataToSend);
+      const complaint = await submitComplaint(payload);
 
-      const complaint = response.data.data;
-
-      if (complaint.aiSuggestions) {
-        setAiSuggestions(complaint.aiSuggestions);
-      }
-
-      // Reset form
-      setFormData({
-        title: "",
-        category: "",
-        pnrNumber: "",
-        contactMobile: "",
-        contactEmail: "",
-      });
+      setAiSuggestions(complaint.aiSuggestions || null);
+      setFormData(initialFormData);
       setImage(null);
       setImagePreview(null);
-
-      // Show inline success popup
       setShowSuccess(true);
 
-      // Call success callback after short delay so popup is visible
       if (onSubmitSuccess) {
-        setTimeout(() => onSubmitSuccess(complaint), 2500);
+        setTimeout(() => onSubmitSuccess(complaint), 1200);
       }
     } catch (error) {
-      console.error("Error submitting complaint:", error);
-      const msg =
+      const message =
         error.response?.data?.message ||
         error.response?.data?.errors?.[0]?.message ||
         (error.code === "ECONNABORTED"
-          ? "Server is waking up. Please try again in a few seconds."
+          ? "Server is taking too long to respond. Please try again."
           : error.message === "Network Error"
-            ? "Cannot reach server. Please check your connection and try again."
+            ? "Cannot reach the server. Please check your connection and try again."
             : "Something went wrong. Please try again.");
-      setErrorMsg(msg);
+
+      setErrorMsg(message);
     } finally {
       setLoading(false);
     }
@@ -113,12 +110,11 @@ import { toast } from "react-toastify";
         </h2>
         <FaRobot
           className="text-railway-orange text-2xl"
-          title="AI-Powered Analysis"
+          title="AI-assisted complaint handling"
         />
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Title */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">
             Complaint Title *
@@ -129,7 +125,7 @@ import { toast } from "react-toastify";
             value={formData.title}
             onChange={handleChange}
             className="input-field"
-            placeholder="Brief description of your issue"
+            placeholder="Briefly describe the issue"
             maxLength="200"
             required
           />
@@ -138,9 +134,24 @@ import { toast } from "react-toastify";
           </p>
         </div>
 
-        {/* PNR + Category row */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Complaint Description
+          </label>
+          <textarea
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            className="input-field min-h-[120px] resize-y"
+            placeholder="Add more detail so the concerned department can resolve the issue faster."
+            maxLength="2000"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            {formData.description.length}/2000 characters
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* PNR Number */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               <FaTicketAlt className="inline mr-1 text-railway-orange" />
@@ -150,21 +161,19 @@ import { toast } from "react-toastify";
               type="text"
               name="pnrNumber"
               value={formData.pnrNumber}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                setFormData({ ...formData, pnrNumber: val });
-              }}
+              onChange={(event) =>
+                setFormData((current) => ({
+                  ...current,
+                  pnrNumber: event.target.value.replace(/\D/g, "").slice(0, 10),
+                }))
+              }
               className="input-field font-mono tracking-widest"
               placeholder="10-digit PNR"
               maxLength="10"
               required
             />
-            <p className="text-xs text-gray-400 mt-1">
-              Enter your 10-digit PNR number
-            </p>
           </div>
 
-          {/* Problem Section / Category */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               <FaTag className="inline mr-1 text-purple-500" />
@@ -177,57 +186,69 @@ import { toast } from "react-toastify";
               className="input-field bg-white"
               required
             >
-              <option value="">— Select a category —</option>
-              <option value="cleanliness">🧹 Cleanliness</option>
-              <option value="safety">🛡️ Safety</option>
-              <option value="staff_behavior">👤 Staff Behaviour</option>
-              <option value="staff_complaint">🗣️ Staff Complaint</option>
-              <option value="overcharging">💰 Overcharging</option>
-              <option value="facilities">🏠 Facilities</option>
-              <option value="ticketing">🎫 Ticketing</option>
-              <option value="punctuality">⏰ Punctuality</option>
-              <option value="food_quality">🍱 Food Quality</option>
-              <option value="infrastructure">🏗️ Infrastructure</option>
+              <option value="">Select a category</option>
+              <option value="cleanliness">Cleanliness</option>
+              <option value="safety">Safety</option>
+              <option value="staff_behavior">Staff behaviour</option>
+              <option value="staff_complaint">Staff complaint</option>
+              <option value="overcharging">Overcharging</option>
+              <option value="facilities">Facilities</option>
+              <option value="ticketing">Ticketing</option>
+              <option value="punctuality">Punctuality</option>
+              <option value="food_quality">Food quality</option>
+              <option value="infrastructure">Infrastructure</option>
               <option value="seat_occupied_by_other">
-                💺 Seat Occupied by Other
+                Seat occupied by other passenger
               </option>
-              <option value="other">📋 Other</option>
+              <option value="other">Other</option>
             </select>
-            <p className="text-xs text-gray-400 mt-1">
-              Choose the category that best matches your issue
-            </p>
           </div>
         </div>
 
-        {/* Mobile + Email row */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <FaTrain className="inline mr-1 text-blue-500" />
+            Train Number
+          </label>
+          <input
+            type="text"
+            name="trainNumber"
+            value={formData.trainNumber}
+            onChange={handleChange}
+            className="input-field"
+            placeholder="Optional train number"
+            maxLength="10"
+          />
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Mobile Number */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               <FaPhone className="inline mr-1 text-green-600" />
-              Mobile Number
-              <span className="ml-1 text-xs font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                Optional
-              </span>
+              Mobile Number *
             </label>
             <input
               type="tel"
               name="contactMobile"
               value={formData.contactMobile}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                setFormData({ ...formData, contactMobile: val });
-              }}
+              onChange={(event) =>
+                setFormData((current) => ({
+                  ...current,
+                  contactMobile: event.target.value
+                    .replace(/\D/g, "")
+                    .slice(0, 10),
+                }))
+              }
               className="input-field"
-              placeholder="10-digit mobile no."
+              placeholder="10-digit mobile number"
               maxLength="10"
+              required
             />
             <p className="text-xs text-gray-400 mt-1">
-              For additional notifications
+              SMS updates will be sent on each complaint stage.
             </p>
           </div>
 
-          {/* Email */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               <FaEnvelope className="inline mr-1 text-blue-500" />
@@ -239,16 +260,15 @@ import { toast } from "react-toastify";
               value={formData.contactEmail}
               onChange={handleChange}
               className="input-field"
-              placeholder="your@email.com"
+              placeholder="you@example.com"
               required
             />
             <p className="text-xs text-gray-400 mt-1">
-              Used to login &amp; track your complaint
+              Tracking credentials will also be sent to this email.
             </p>
           </div>
         </div>
 
-        {/* Image Upload */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">
             Upload Image (Optional)
@@ -282,7 +302,6 @@ import { toast } from "react-toastify";
           </div>
         </div>
 
-        {/* AI Suggestions Display */}
         {aiSuggestions && (
           <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-3">
@@ -297,7 +316,7 @@ import { toast } from "react-toastify";
                   Suggested Category:
                 </span>
                 <span className="ml-2 badge badge-in-progress">
-                  {aiSuggestions.suggestedCategory}
+                  {aiSuggestions.suggestedCategory || "N/A"}
                 </span>
               </div>
               <div>
@@ -305,12 +324,12 @@ import { toast } from "react-toastify";
                   Suggested Priority:
                 </span>
                 <span
-                  className={`ml-2 badge badge-${aiSuggestions.suggestedPriority}`}
+                  className={`ml-2 badge badge-${aiSuggestions.suggestedPriority || "medium"}`}
                 >
-                  {aiSuggestions.suggestedPriority}
+                  {aiSuggestions.suggestedPriority || "medium"}
                 </span>
               </div>
-              {aiSuggestions.confidence && (
+              {aiSuggestions.confidence ? (
                 <div className="md:col-span-2">
                   <span className="font-semibold text-gray-700">
                     Confidence:
@@ -319,37 +338,33 @@ import { toast } from "react-toastify";
                     {(aiSuggestions.confidence * 100).toFixed(1)}%
                   </span>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         )}
 
-        {/* Error Message */}
-        {errorMsg && (
+        {errorMsg ? (
           <div className="bg-red-50 border border-red-300 text-red-700 rounded-lg px-4 py-3 text-sm font-medium">
-            ⚠️ {errorMsg}
+            {errorMsg}
           </div>
-        )}
+        ) : null}
 
-        {/* Submit Button */}
         <button
           type="submit"
           disabled={loading || showSuccess}
-          className={`w-full flex items-center justify-center gap-2 py-3 px-6 rounded-lg font-semibold text-white transition-all duration-500 ${
-            showSuccess
-              ? "bg-green-500 cursor-default scale-100"
-              : "btn-primary"
+          className={`w-full flex items-center justify-center gap-2 py-3 px-6 rounded-lg font-semibold text-white transition-all duration-300 ${
+            showSuccess ? "bg-green-500 cursor-default" : "btn-primary"
           }`}
         >
           {loading ? (
             <>
               <FaSpinner className="animate-spin" />
-              Submitting & Analyzing...
+              Submitting complaint...
             </>
           ) : showSuccess ? (
             <>
-              <FaCheckCircle className="text-white text-lg" />
-              Complaint Submitted Successfully!
+              <FaCheckCircle />
+              Complaint submitted successfully
             </>
           ) : (
             "Submit Complaint"

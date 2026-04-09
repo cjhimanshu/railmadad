@@ -9,22 +9,69 @@ const SENTIMENT_MODEL =
   "distilbert/distilbert-base-uncased-finetuned-sst-2-english";
 const RESPONSE_MODEL = process.env.HF_MODEL_RESPONSE || "openai-community/gpt2";
 
-// Helper function to make API calls to Hugging Face
-const queryHuggingFace = async (model, data) => {
-  try {
-    const response = await axios.post(`${HUGGINGFACE_API_URL}/${model}`, data, {
-      headers: {
-        Authorization: `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error(
-      "Hugging Face API Error:",
-      error.response?.data || error.message,
-    );
-    throw error;
+// Timeout configuration (10 seconds for Hugging Face)
+const HF_TIMEOUT = parseInt(process.env.HF_TIMEOUT || "10000", 10);
+
+// Failure tracking: { model: failureCount, lastFailure: timestamp }
+const failureTracker = {};
+
+// Helper function to make API calls to Hugging Face with timeout and retry
+const queryHuggingFace = async (model, data, retries = 2) => {
+  for (let attempt = 1; attempt <= retries + 1; attempt++) {
+    try {
+      const response = await axios.post(
+        `${HUGGINGFACE_API_URL}/${model}`,
+        data,
+        {
+          headers: {
+            Authorization: `Bearer ${API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          timeout: HF_TIMEOUT,
+        },
+      );
+
+      // Reset failure count on success
+      if (failureTracker[model]) {
+        failureTracker[model] = 0;
+      }
+
+      return response.data;
+    } catch (error) {
+      // Track failure
+      failureTracker[model] = (failureTracker[model] || 0) + 1;
+      const failureCount = failureTracker[model];
+
+      // Log warning if too many failures
+      if (failureCount >= 5) {
+        console.warn(
+          `[AI ALERT] Model ${model} failed ${failureCount} times. May need investigation.`,
+        );
+      }
+
+      const isLastAttempt = attempt === retries + 1;
+      const errorMsg = error.response?.data?.error || error.message;
+
+      console.error(
+        `[Attempt ${attempt}/${retries + 1}] Hugging Face ${model} Error: ${errorMsg}`,
+      );
+
+      // Retry with backoff if not last attempt
+      if (
+        !isLastAttempt &&
+        (error.code === "ECONNABORTED" ||
+          error.code === "ETIMEDOUT" ||
+          error.response?.status >= 500)
+      ) {
+        const backoffMs = Math.pow(2, attempt - 1) * 1000;
+        await new Promise((resolve) => setTimeout(resolve, backoffMs));
+        continue;
+      }
+
+      if (isLastAttempt) {
+        throw error;
+      }
+    }
   }
 };
 
@@ -219,6 +266,13 @@ exports.processComplaintWithAI = async (title, description) => {
       exports.analyzeSentiment(fullText),
     ]);
 
+    // Capture which model versions were used
+    const modelsUsed = {
+      categoryModel: CATEGORY_MODEL,
+      sentimentModel: SENTIMENT_MODEL,
+      responseModel: RESPONSE_MODEL,
+    };
+
     // Get priority based on sentiment
     const priorityResult = await exports.suggestPriority(
       fullText,
@@ -241,6 +295,7 @@ exports.processComplaintWithAI = async (title, description) => {
         sentiment: sentimentResult.confidence,
         priority: priorityResult.confidence,
       },
+      modelsUsed,
     };
   } catch (error) {
     console.error("Error in processComplaintWithAI:", error.message);

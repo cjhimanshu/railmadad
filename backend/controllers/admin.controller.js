@@ -1,27 +1,36 @@
 const Complaint = require("../models/Complaint");
 const User = require("../models/User");
 const ControlUnitDispatch = require("../models/ControlUnitDispatch");
+const {
+  sendComplaintProgressUpdate,
+} = require("../services/complaintTracking.service");
 
-// ── Simple in-memory analytics cache ─────────────────────────────────────────────────
-const analyticsCache = { data: null, lastUpdated: 0, TTL: 5 * 60 * 1000 }; // 5-minute TTL
-const statsCache = { data: null, lastUpdated: 0, TTL: 60 * 1000 }; // 1-minute TTL
+const analyticsCache = { data: null, lastUpdated: 0, TTL: 5 * 60 * 1000 };
+const statsCache = { data: null, lastUpdated: 0, TTL: 60 * 1000 };
 
-// @desc    Get all complaints (Admin only) — paginated
-// @route   GET /api/admin/complaints?page=1&limit=50&status=&category=&priority=&department=
+// @desc    Get all complaints (Admin only)
+// @route   GET /api/admin/complaints
 // @access  Private/Admin
 exports.getAllComplaints = async (req, res, next) => {
   try {
     const { status, category, priority, department } = req.query;
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(200, parseInt(req.query.limit) || 50);
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(200, parseInt(req.query.limit, 10) || 50);
     const skip = (page - 1) * limit;
 
-    // Build filter object
     const filter = {};
-    if (status) filter.status = status;
-    if (category) filter.category = category;
-    if (priority) filter.priority = priority;
-    if (department) filter.assignedDepartment = department;
+    if (status) {
+      filter.status = status;
+    }
+    if (category) {
+      filter.category = category;
+    }
+    if (priority) {
+      filter.priority = priority;
+    }
+    if (department) {
+      filter.assignedDepartment = department;
+    }
 
     const [complaints, total] = await Promise.all([
       Complaint.find(filter)
@@ -52,8 +61,7 @@ exports.updateComplaintStatus = async (req, res, next) => {
   try {
     const { status, assignedDepartment, adminNotes } = req.body;
 
-    let complaint = await Complaint.findById(req.params.id);
-
+    const complaint = await Complaint.findById(req.params.id);
     if (!complaint) {
       return res.status(404).json({
         success: false,
@@ -61,7 +69,6 @@ exports.updateComplaintStatus = async (req, res, next) => {
       });
     }
 
-    // Block direct "resolved" if closure requirements not met
     if (status === "resolved") {
       if (!complaint.authorityMarkedDone) {
         return res.status(400).json({
@@ -88,27 +95,33 @@ exports.updateComplaintStatus = async (req, res, next) => {
       }
     }
 
-    // Update fields
-    if (status) complaint.status = status;
-    if (assignedDepartment) complaint.assignedDepartment = assignedDepartment;
-    if (adminNotes) complaint.adminNotes = adminNotes;
+    const previousTrackingStatus = complaint.trackingStatus;
+    const previousStatus = complaint.status;
 
-    // Set resolved date if status is resolved
+    if (status) {
+      complaint.status = status;
+    }
+    if (assignedDepartment) {
+      complaint.assignedDepartment = assignedDepartment;
+    }
+    if (adminNotes) {
+      complaint.adminNotes = adminNotes;
+    }
+
     if (status === "resolved" && !complaint.resolvedAt) {
       complaint.resolvedAt = new Date();
       complaint.closureBlocked = false;
     }
 
-    // Sync 4-level public tracking status
     if (status) {
-      const prevTracking = complaint.trackingStatus;
-      let newTracking = prevTracking;
-      if (status === "in_progress" && prevTracking === "registered") {
+      let newTracking = complaint.trackingStatus;
+      if (status === "in_progress" && complaint.trackingStatus === "registered") {
         newTracking = "sent_to_authority";
       } else if (status === "resolved") {
         newTracking = "resolved";
       }
-      if (newTracking !== prevTracking) {
+
+      if (newTracking !== complaint.trackingStatus) {
         complaint.trackingStatus = newTracking;
         complaint.trackingHistory.push({
           stage: newTracking,
@@ -120,6 +133,7 @@ exports.updateComplaintStatus = async (req, res, next) => {
         });
       }
     }
+
     if (
       assignedDepartment &&
       assignedDepartment !== "unassigned" &&
@@ -136,6 +150,21 @@ exports.updateComplaintStatus = async (req, res, next) => {
     await complaint.save();
     await complaint.populate("userId", "name email phone");
 
+    setImmediate(async () => {
+      try {
+        await sendComplaintProgressUpdate({
+          complaint,
+          previousTrackingStatus,
+          previousStatus,
+        });
+      } catch (notificationError) {
+        console.error(
+          "Admin status notification error:",
+          notificationError.message,
+        );
+      }
+    });
+
     res.status(200).json({
       success: true,
       message: "Complaint updated successfully",
@@ -145,6 +174,7 @@ exports.updateComplaintStatus = async (req, res, next) => {
     next(error);
   }
 };
+
 // @route   PUT /api/admin/complaints/:id/mark-done
 // @access  Private/Admin
 exports.markAuthorityDone = async (req, res, next) => {
@@ -158,12 +188,16 @@ exports.markAuthorityDone = async (req, res, next) => {
         .json({ success: false, message: "Complaint not found" });
     }
 
+    const previousTrackingStatus = complaint.trackingStatus;
+    const previousStatus = complaint.status;
+
     complaint.authorityMarkedDone = true;
     complaint.authorityMarkedAt = new Date();
-    if (actionNotes) complaint.authorityActionNotes = actionNotes;
-    complaint.status = "in_progress"; // ensure status reflects action ongoing
+    if (actionNotes) {
+      complaint.authorityActionNotes = actionNotes;
+    }
+    complaint.status = "in_progress";
 
-    // Advance public tracking to "authority_taken_action"
     if (
       complaint.trackingStatus !== "resolved" &&
       complaint.trackingStatus !== "authority_taken_action"
@@ -185,6 +219,21 @@ exports.markAuthorityDone = async (req, res, next) => {
     await complaint.save();
     await complaint.populate("userId", "name email phone");
 
+    setImmediate(async () => {
+      try {
+        await sendComplaintProgressUpdate({
+          complaint,
+          previousTrackingStatus,
+          previousStatus,
+        });
+      } catch (notificationError) {
+        console.error(
+          "Authority action notification error:",
+          notificationError.message,
+        );
+      }
+    });
+
     res.status(200).json({
       success: true,
       message:
@@ -201,7 +250,6 @@ exports.markAuthorityDone = async (req, res, next) => {
 // @access  Private/Admin
 exports.getAnalytics = async (req, res, next) => {
   try {
-    // Serve from cache if fresh
     if (
       analyticsCache.data &&
       Date.now() - analyticsCache.lastUpdated < analyticsCache.TTL
@@ -214,7 +262,6 @@ exports.getAnalytics = async (req, res, next) => {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    // Run all heavy aggregations in parallel — single round-trip each
     const [
       totalComplaints,
       complaintsByStatus,
@@ -227,27 +274,16 @@ exports.getAnalytics = async (req, res, next) => {
       totalUsers,
     ] = await Promise.all([
       Complaint.countDocuments(),
-
       Complaint.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
-      Complaint.aggregate([
-        { $group: { _id: "$category", count: { $sum: 1 } } },
-      ]),
-      Complaint.aggregate([
-        { $group: { _id: "$priority", count: { $sum: 1 } } },
-      ]),
-      Complaint.aggregate([
-        { $group: { _id: "$sentiment", count: { $sum: 1 } } },
-      ]),
-
+      Complaint.aggregate([{ $group: { _id: "$category", count: { $sum: 1 } } }]),
+      Complaint.aggregate([{ $group: { _id: "$priority", count: { $sum: 1 } } }]),
+      Complaint.aggregate([{ $group: { _id: "$sentiment", count: { $sum: 1 } } }]),
       Complaint.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
-
-      // Avg resolution time via aggregate — no in-memory array loading
       Complaint.aggregate([
         { $match: { status: "resolved", resolvedAt: { $exists: true } } },
         { $project: { diff: { $subtract: ["$resolvedAt", "$createdAt"] } } },
         { $group: { _id: null, avgMs: { $avg: "$diff" } } },
       ]),
-
       Complaint.aggregate([
         { $match: { createdAt: { $gte: thirtyDaysAgo } } },
         {
@@ -258,7 +294,6 @@ exports.getAnalytics = async (req, res, next) => {
         },
         { $sort: { _id: 1 } },
       ]),
-
       User.countDocuments({ role: "user" }),
     ]);
 
@@ -284,7 +319,6 @@ exports.getAnalytics = async (req, res, next) => {
       complaintsTrend,
     };
 
-    // Populate cache
     analyticsCache.data = result;
     analyticsCache.lastUpdated = Date.now();
 
@@ -299,7 +333,6 @@ exports.getAnalytics = async (req, res, next) => {
 // @access  Private/Admin
 exports.getStats = async (req, res, next) => {
   try {
-    // Serve from cache if fresh
     if (
       statsCache.data &&
       Date.now() - statsCache.lastUpdated < statsCache.TTL
@@ -309,7 +342,6 @@ exports.getStats = async (req, res, next) => {
         .json({ success: true, cached: true, data: statsCache.data });
     }
 
-    // All 6 counts run in parallel — one connection round-trip each
     const [pending, inProgress, resolved, rejected, urgent, high] =
       await Promise.all([
         Complaint.countDocuments({ status: "pending" }),
@@ -337,10 +369,16 @@ exports.getDispatchLog = async (req, res, next) => {
   try {
     const { priority, dispatchType, acknowledged } = req.query;
     const filter = {};
-    if (priority) filter.priority = priority;
-    if (dispatchType) filter.dispatchType = dispatchType;
-    if (acknowledged !== undefined)
+
+    if (priority) {
+      filter.priority = priority;
+    }
+    if (dispatchType) {
+      filter.dispatchType = dispatchType;
+    }
+    if (acknowledged !== undefined) {
       filter.acknowledged = acknowledged === "true";
+    }
 
     const dispatches = await ControlUnitDispatch.find(filter)
       .sort({ dispatchedAt: -1 })
@@ -349,7 +387,6 @@ exports.getDispatchLog = async (req, res, next) => {
         "title category priority status assignedDepartment",
       );
 
-    // Also return queue status
     const { getQueueStatus } = require("../services/controlUnit.service");
     const queueStatus = getQueueStatus();
 
@@ -364,36 +401,59 @@ exports.getDispatchLog = async (req, res, next) => {
   }
 };
 
-// @desc    Bulk send complaints to authority (update trackingStatus)
+// @desc    Bulk send complaints to authority
 // @route   POST /api/admin/bulk-send-to-authority
 // @access  Private/Admin
 exports.bulkSendToAuthority = async (req, res, next) => {
   try {
     const { status, priority } = req.body;
 
-    // Build filter — only act on complaints not already sent or resolved
     const filter = {
-      trackingStatus: { $in: ["registered"] },
+      trackingStatus: "registered",
     };
-    if (status) filter.status = status;
-    if (priority) filter.priority = priority;
+    if (status) {
+      filter.status = status;
+    }
+    if (priority) {
+      filter.priority = priority;
+    }
 
+    const complaints = await Complaint.find(filter);
     const now = new Date();
-    const result = await Complaint.updateMany(filter, {
-      $set: { trackingStatus: "sent_to_authority" },
-      $push: {
-        trackingHistory: {
-          stage: "sent_to_authority",
-          updatedAt: now,
-          note: "Bulk dispatched to authority by admin.",
-        },
-      },
-    });
+
+    for (const complaint of complaints) {
+      const previousTrackingStatus = complaint.trackingStatus;
+      const previousStatus = complaint.status;
+
+      complaint.trackingStatus = "sent_to_authority";
+      complaint.trackingHistory.push({
+        stage: "sent_to_authority",
+        updatedAt: now,
+        note: "Bulk dispatched to authority by admin.",
+      });
+
+      await complaint.save();
+
+      setImmediate(async () => {
+        try {
+          await sendComplaintProgressUpdate({
+            complaint,
+            previousTrackingStatus,
+            previousStatus,
+          });
+        } catch (notificationError) {
+          console.error(
+            "Bulk dispatch notification error:",
+            notificationError.message,
+          );
+        }
+      });
+    }
 
     res.status(200).json({
       success: true,
-      message: `${result.modifiedCount} complaint(s) sent to authority.`,
-      modifiedCount: result.modifiedCount,
+      message: `${complaints.length} complaint(s) sent to authority.`,
+      modifiedCount: complaints.length,
     });
   } catch (error) {
     next(error);

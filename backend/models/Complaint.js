@@ -8,6 +8,23 @@ const complaintSchema = new mongoose.Schema(
       required: false,
       default: null,
     },
+    complaintNumber: {
+      type: String,
+      trim: true,
+      unique: true,
+      sparse: true,
+    },
+    trackingUserId: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      unique: true,
+      sparse: true,
+    },
+    trackingPasswordHash: {
+      type: String,
+      select: false,
+    },
     title: {
       type: String,
       required: [true, "Please provide a complaint title"],
@@ -120,6 +137,21 @@ const complaintSchema = new mongoose.Schema(
       suggestedResponse: String,
       confidence: Number,
     },
+    // Track which AI models processed this complaint
+    aiModelsUsed: {
+      categoryModel: {
+        type: String,
+        default: "facebook/bart-large-mnli",
+      },
+      sentimentModel: {
+        type: String,
+        default: "distilbert/distilbert-base-uncased-finetuned-sst-2-english",
+      },
+      responseModel: {
+        type: String,
+        default: "openai-community/gpt2",
+      },
+    },
     assignedDepartment: {
       type: String,
       enum: [
@@ -187,6 +219,8 @@ const complaintSchema = new mongoose.Schema(
 // ── Indexes ────────────────────────────────────────────────────────────────────
 // Single-field
 complaintSchema.index({ userId: 1, createdAt: -1 });
+complaintSchema.index({ complaintNumber: 1 }, { unique: true, sparse: true });
+complaintSchema.index({ trackingUserId: 1 }, { unique: true, sparse: true });
 complaintSchema.index({ pnrNumber: 1 });
 complaintSchema.index({ contactEmail: 1 });
 complaintSchema.index({ contactMobile: 1 });

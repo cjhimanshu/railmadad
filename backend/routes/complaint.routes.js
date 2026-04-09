@@ -9,6 +9,7 @@ const {
   submitSatisfaction,
   customerConfirmResolved,
   closeComplaint,
+  trackComplaintWithCredentials,
   trackComplaintByContact,
 } = require("../controllers/complaint.controller");
 const { protect, optionalProtect } = require("../middleware/auth.middleware");
@@ -17,7 +18,6 @@ const upload = require("../config/upload.config");
 
 const router = express.Router();
 
-// Validation rules
 const complaintValidation = [
   body("title")
     .trim()
@@ -32,7 +32,6 @@ const complaintValidation = [
     .withMessage("Description cannot exceed 2000 characters"),
 ];
 
-// ── Public: submit a complaint (no login needed) ───────────────────────
 router.post(
   "/",
   optionalProtect,
@@ -42,10 +41,9 @@ router.post(
   createComplaint,
 );
 
-// ── Protected: track complaints (login required) ───────────────────────
+router.post("/track", trackComplaintWithCredentials);
 router.get("/track", protect, trackComplaintByContact);
 
-// ── Protected: all other complaint routes ─────────────────────────────
 router.use(protect);
 
 router.get("/", getUserComplaints);

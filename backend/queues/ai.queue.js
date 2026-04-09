@@ -34,6 +34,7 @@ const processAIJob = async (complaintId, title, description) => {
         priority: aiResults.priority,
         sentiment: aiResults.sentiment,
         aiProcessed: true,
+        aiModelsUsed: aiResults.modelsUsed,
         aiSuggestions: {
           suggestedCategory: aiResults.category,
           suggestedPriority: aiResults.priority,

@@ -1,28 +1,18 @@
-const crypto = require("crypto");
-const bcrypt = require("bcryptjs");
-const { Resend } = require("resend");
-const User = require("../models/User");
 const Complaint = require("../models/Complaint");
 const { uploadToCloudinary } = require("../config/cloudinary.config");
-const aiService = require("../services/ai.service");
 const automationService = require("../services/automation.service");
-const controlUnitService = require("../services/controlUnit.service");
 const { enqueueAI } = require("../queues/ai.queue");
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-const sendEmail = async ({ email, subject, html }) => {
-  const { error } = await resend.emails.send({
-    from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
-    to: email,
-    subject,
-    html,
-  });
-  if (error) throw new Error(error.message);
-};
+const {
+  createComplaintTrackingCredentials,
+  sendComplaintAccessCredentials,
+  sendComplaintProgressUpdate,
+  serializePublicComplaint,
+  verifyComplaintTracker,
+} = require("../services/complaintTracking.service");
 
 // @desc    Create new complaint
 // @route   POST /api/complaints
-// @access  Public (no login required)
+// @access  Public
 exports.createComplaint = async (req, res, next) => {
   try {
     const {
@@ -35,37 +25,46 @@ exports.createComplaint = async (req, res, next) => {
       contactEmail,
     } = req.body;
 
-    // Validate required contact info for guest submissions
-    if (!req.user && !contactEmail) {
+    const normalizedEmail = (contactEmail || req.user?.email || "")
+      .trim()
+      .toLowerCase();
+    const normalizedMobile = (contactMobile || req.user?.phone || "").trim();
+
+    if (!normalizedEmail || !normalizedMobile) {
       return res.status(400).json({
         success: false,
         message:
-          "Please provide your email address so you can login and track your complaint.",
+          "Please provide both mobile number and email address to receive tracking credentials.",
       });
     }
-    if (
-      contactEmail &&
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim())
-    ) {
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       return res.status(400).json({
         success: false,
         message: "Please provide a valid email address.",
       });
     }
 
-    // Prepare complaint data with safe defaults — AI will refine asynchronously
+    if (!/^\d{10}$/.test(normalizedMobile)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid 10-digit mobile number.",
+      });
+    }
+
+    const trackingCredentials = await createComplaintTrackingCredentials();
+
     const complaintData = {
       userId: req.user ? req.user.id : null,
-      title,
-      description,
+      complaintNumber: trackingCredentials.complaintNumber,
+      trackingUserId: trackingCredentials.trackingUserId,
+      trackingPasswordHash: trackingCredentials.trackingPasswordHash,
+      title: title.trim(),
+      description: description ? description.trim() : "",
       pnrNumber: pnrNumber ? pnrNumber.trim() : null,
       trainNumber: trainNumber ? trainNumber.trim() : null,
-      contactMobile: contactMobile ? contactMobile.trim() : null,
-      contactEmail:
-        contactEmail && contactEmail.trim() !== ""
-          ? contactEmail.trim().toLowerCase()
-          : req.user?.email || null,
-      // Use user-selected category if provided; AI will refine if not
+      contactMobile: normalizedMobile,
+      contactEmail: normalizedEmail,
       category: userCategory || "other",
       priority: "medium",
       sentiment: "neutral",
@@ -86,7 +85,6 @@ exports.createComplaint = async (req, res, next) => {
       },
     };
 
-    // Handle image upload if present
     if (req.file) {
       try {
         const result = await uploadToCloudinary(req.file.buffer);
@@ -94,105 +92,76 @@ exports.createComplaint = async (req, res, next) => {
         complaintData.imagePublicId = result.public_id;
       } catch (uploadError) {
         console.error("Image upload error:", uploadError);
-        // Continue without image if upload fails
       }
     }
 
-    // Create complaint
     const complaint = await Complaint.create(complaintData);
-
-    // Initial SLA assignment with default priority (AI will refine and re-assign)
     await automationService.assignDepartmentAndSLA(complaint);
-
-    // Enqueue AI processing — runs in background, does not block the response.
-    // The worker will update category/priority/sentiment and re-dispatch if needed.
     await enqueueAI(complaint._id, title, description || "");
 
-    // Populate user details (only if linked to a user)
     if (complaint.userId) {
       await complaint.populate("userId", "name email");
     }
 
+    const responseComplaint = complaint.toObject();
+    delete responseComplaint.trackingPasswordHash;
+    responseComplaint.trackingCredentials = {
+      complaintNumber: trackingCredentials.complaintNumber,
+      trackingUserId: trackingCredentials.trackingUserId,
+      trackingPassword: trackingCredentials.trackingPassword,
+    };
+
     res.status(201).json({
       success: true,
       message: "Complaint submitted successfully",
-      data: complaint,
+      data: responseComplaint,
     });
 
-    // Run account setup + email in background so API response is not blocked
-    if (!req.user && complaintData.contactEmail) {
-      const complaintId = complaint._id;
-      const cleanEmail = complaintData.contactEmail.toLowerCase();
-      setImmediate(async () => {
-        try {
-          let accountUser = await User.findOne({ email: cleanEmail });
-          let isNewAccount = false;
+    setImmediate(async () => {
+      try {
+        await sendComplaintAccessCredentials({
+          complaint,
+          trackingPassword: trackingCredentials.trackingPassword,
+        });
+      } catch (deliveryError) {
+        console.error(
+          "Complaint access delivery error:",
+          deliveryError.message,
+        );
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
-          if (!accountUser) {
-            // Derive a readable name from the email prefix
-            const prefix = cleanEmail.split("@")[0].replace(/[._\-]/g, " ");
-            const name =
-              prefix.charAt(0).toUpperCase() + prefix.slice(1) || "User";
-            const tempPassword = await bcrypt.hash(
-              crypto.randomBytes(16).toString("hex"),
-              10,
-            );
-            accountUser = await User.create({
-              name,
-              email: cleanEmail,
-              password: tempPassword,
-            });
-            isNewAccount = true;
-          }
+// @desc    Track a complaint with complaint-specific credentials
+// @route   POST /api/complaints/track
+// @access  Public
+exports.trackComplaintWithCredentials = async (req, res, next) => {
+  try {
+    const { trackingUserId, password } = req.body;
 
-          // Generate a 24-hour password-setup token
-          const setupToken = crypto.randomBytes(32).toString("hex");
-          accountUser.resetPasswordToken = crypto
-            .createHash("sha256")
-            .update(setupToken)
-            .digest("hex");
-          accountUser.resetPasswordExpire = Date.now() + 24 * 60 * 60 * 1000;
-          await accountUser.save({ validateBeforeSave: false });
-
-          const setupUrl = `${process.env.FRONTEND_URL}/reset-password/${setupToken}`;
-          const html = `
-            <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">
-              <div style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8);padding:28px 32px">
-                <h1 style="margin:0;color:#fff;font-size:22px">&#128646; RailMadad</h1>
-                <p style="margin:4px 0 0;color:#bfdbfe;font-size:14px">Railway Complaint Management System</p>
-              </div>
-              <div style="padding:32px">
-                <h2 style="color:#1e293b;margin-top:0">&#9989; Complaint Registered Successfully</h2>
-                <p style="color:#475569">Hi <strong>${accountUser.name}</strong>,</p>
-                <p style="color:#475569">Your complaint has been received and is being reviewed by the concerned railway authority.</p>
-                ${
-                  isNewAccount
-                    ? `<p style="color:#475569">We've created a <strong>RailMadad account</strong> for you using this email. Set your password using the button below to login and track your complaint status in real time.</p>`
-                    : `<p style="color:#475569">Use the button below to set a new password and then login to track your complaint.</p>`
-                }
-                <div style="text-align:center;margin:28px 0">
-                  <a href="${setupUrl}" style="background:#1d4ed8;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:15px">Set Password &amp; Track Complaint</a>
-                </div>
-                <p style="color:#94a3b8;font-size:12px;word-break:break-all">${setupUrl}</p>
-                <p style="color:#94a3b8;font-size:12px">This link expires in <strong>24 hours</strong>. If you didn't submit a complaint, you can safely ignore this email.</p>
-              </div>
-            </div>`;
-
-          await sendEmail({
-            email: cleanEmail,
-            subject: "RailMadad — Set Your Password to Track Your Complaint",
-            html,
-          });
-
-          // Link complaint to user account so it appears in dashboard
-          await Complaint.findByIdAndUpdate(complaintId, {
-            userId: accountUser._id,
-          });
-        } catch (accountErr) {
-          console.error("Auto account setup error:", accountErr.message);
-        }
+    if (!trackingUserId || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Tracking ID and password are required.",
       });
     }
+
+    const complaint = await verifyComplaintTracker({ trackingUserId, password });
+
+    if (!complaint) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid tracking ID or password.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: serializePublicComplaint(complaint),
+    });
   } catch (error) {
     next(error);
   }
@@ -203,27 +172,11 @@ exports.createComplaint = async (req, res, next) => {
 // @access  Private
 exports.getUserComplaints = async (req, res, next) => {
   try {
-    // Fetch complaints owned by userId OR matched by contactEmail (guest submissions
-    // that were later linked when account was auto-created)
     const complaints = await Complaint.find({
-      $or: [
-        { userId: req.user.id },
-        { contactEmail: req.user.email, userId: null },
-      ],
+      $or: [{ userId: req.user.id }, { contactEmail: req.user.email }],
     })
       .sort({ createdAt: -1 })
       .populate("userId", "name email");
-
-    // Silently back-link any unlinked email-matched complaints
-    const unlinked = complaints.filter(
-      (c) => !c.userId && c.contactEmail === req.user.email,
-    );
-    if (unlinked.length > 0) {
-      await Complaint.updateMany(
-        { _id: { $in: unlinked.map((c) => c._id) } },
-        { userId: req.user.id },
-      );
-    }
 
     res.status(200).json({
       success: true,
@@ -252,8 +205,6 @@ exports.getComplaint = async (req, res, next) => {
       });
     }
 
-    // Make sure user owns the complaint or is admin
-    // complaint.userId is populated (User object) or null for guest complaints
     if (
       (!complaint.userId || complaint.userId._id.toString() !== req.user.id) &&
       req.user.role !== "admin"
@@ -287,7 +238,6 @@ exports.updateComplaint = async (req, res, next) => {
       });
     }
 
-    // Make sure user owns the complaint
     if (!complaint.userId || complaint.userId.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -295,7 +245,6 @@ exports.updateComplaint = async (req, res, next) => {
       });
     }
 
-    // Users can only update if status is pending
     if (complaint.status !== "pending") {
       return res.status(400).json({
         success: false,
@@ -303,11 +252,11 @@ exports.updateComplaint = async (req, res, next) => {
       });
     }
 
-    const { title, description } = req.body;
+    const { title: nextTitle, description: nextDescription } = req.body;
 
     complaint = await Complaint.findByIdAndUpdate(
       req.params.id,
-      { title, description },
+      { title: nextTitle, description: nextDescription },
       {
         new: true,
         runValidators: true,
@@ -338,7 +287,6 @@ exports.deleteComplaint = async (req, res, next) => {
       });
     }
 
-    // Make sure user owns the complaint
     if (!complaint.userId || complaint.userId.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -346,7 +294,6 @@ exports.deleteComplaint = async (req, res, next) => {
       });
     }
 
-    // Users can only delete if status is pending
     if (complaint.status !== "pending") {
       return res.status(400).json({
         success: false,
@@ -396,7 +343,6 @@ exports.submitSatisfaction = async (req, res, next) => {
     complaint.satisfactionComment = comment || null;
     complaint.satisfactionSubmittedAt = new Date();
 
-    // Low rating = block closure and reopen
     if (rating < 3) {
       complaint.closureBlocked = true;
       complaint.closureBlockedReason = `Customer rated ${rating}/5: "${comment || "No comment"}"`;
@@ -408,7 +354,6 @@ exports.submitSatisfaction = async (req, res, next) => {
         performedAt: new Date(),
       });
     } else {
-      // Rating >= 3, customer is satisfied enough
       complaint.closureBlocked = false;
       complaint.automationLog.push({
         action: "SATISFACTION_SUBMITTED",
@@ -468,10 +413,12 @@ exports.customerConfirmResolved = async (req, res, next) => {
       });
     }
 
+    const previousTrackingStatus = complaint.trackingStatus;
+    const previousStatus = complaint.status;
+
     complaint.customerMarkedDone = true;
     complaint.customerMarkedAt = new Date();
 
-    // Auto-close if both sides have confirmed
     if (
       complaint.authorityMarkedDone &&
       complaint.customerMarkedDone &&
@@ -495,6 +442,18 @@ exports.customerConfirmResolved = async (req, res, next) => {
 
     await complaint.save();
 
+    setImmediate(async () => {
+      try {
+        await sendComplaintProgressUpdate({
+          complaint,
+          previousTrackingStatus,
+          previousStatus,
+        });
+      } catch (notificationError) {
+        console.error("Resolution notification error:", notificationError.message);
+      }
+    });
+
     res.status(200).json({
       success: true,
       message:
@@ -508,7 +467,7 @@ exports.customerConfirmResolved = async (req, res, next) => {
   }
 };
 
-// @desc    User closes their own complaint (satisfied with resolution)
+// @desc    User closes their own complaint
 // @route   PUT /api/complaints/:id/close
 // @access  Private
 exports.closeComplaint = async (req, res, next) => {
@@ -520,7 +479,6 @@ exports.closeComplaint = async (req, res, next) => {
         .json({ success: false, message: "Complaint not found" });
     }
 
-    // Allow closure if complaint is owned by this user OR matched by email/phone
     const userOwns =
       complaint.userId && complaint.userId.toString() === req.user.id;
     const userMatchesContact =
@@ -550,6 +508,9 @@ exports.closeComplaint = async (req, res, next) => {
         .json({ success: false, message: "Complaint is already closed." });
     }
 
+    const previousTrackingStatus = complaint.trackingStatus;
+    const previousStatus = complaint.status;
+
     complaint.status = "resolved";
     complaint.resolvedAt = new Date();
     complaint.trackingStatus = "resolved";
@@ -558,7 +519,7 @@ exports.closeComplaint = async (req, res, next) => {
     complaint.trackingHistory.push({
       stage: "resolved",
       updatedAt: new Date(),
-      note: "Complaint closed by user — satisfied with resolution.",
+      note: "Complaint closed by user after satisfactory resolution.",
     });
     complaint.automationLog.push({
       action: "CLOSED_BY_USER",
@@ -568,6 +529,18 @@ exports.closeComplaint = async (req, res, next) => {
     });
 
     await complaint.save();
+
+    setImmediate(async () => {
+      try {
+        await sendComplaintProgressUpdate({
+          complaint,
+          previousTrackingStatus,
+          previousStatus,
+        });
+      } catch (notificationError) {
+        console.error("Resolution notification error:", notificationError.message);
+      }
+    });
 
     res.status(200).json({
       success: true,
@@ -579,7 +552,7 @@ exports.closeComplaint = async (req, res, next) => {
   }
 };
 
-// @desc    Track complaints for logged-in user (auto-uses their email/phone)
+// @desc    Track complaints for logged-in user
 // @route   GET /api/complaints/track
 // @access  Private
 exports.trackComplaintByContact = async (req, res, next) => {
@@ -590,20 +563,29 @@ exports.trackComplaintByContact = async (req, res, next) => {
     const userPhone = req.user.phone;
 
     const orConditions = [];
-    if (userEmail) orConditions.push({ contactEmail: userEmail.toLowerCase() });
-    if (userPhone) orConditions.push({ contactMobile: userPhone.trim() });
+    if (userEmail) {
+      orConditions.push({ contactEmail: userEmail.toLowerCase() });
+    }
+    if (userPhone) {
+      orConditions.push({ contactMobile: userPhone.trim() });
+    }
     orConditions.push({ userId: req.user._id });
 
     const query = { $or: orConditions };
+
     if (pnrNumber && pnrNumber.trim()) {
       query.pnrNumber = pnrNumber.trim();
     }
+
     if (trainNumber && trainNumber.trim()) {
       query.trainNumber = { $regex: trainNumber.trim(), $options: "i" };
     }
+
     if (dateFrom || dateTo) {
       query.createdAt = {};
-      if (dateFrom) query.createdAt.$gte = new Date(dateFrom);
+      if (dateFrom) {
+        query.createdAt.$gte = new Date(dateFrom);
+      }
       if (dateTo) {
         const end = new Date(dateTo);
         end.setHours(23, 59, 59, 999);
@@ -614,7 +596,7 @@ exports.trackComplaintByContact = async (req, res, next) => {
     const complaints = await Complaint.find(query)
       .sort({ createdAt: -1 })
       .select(
-        "title description category priority status trackingStatus trackingHistory pnrNumber trainNumber contactMobile contactEmail createdAt resolvedAt assignedDepartment authorityMarkedDone authorityActionNotes customerMarkedDone userId satisfactionRating closureBlocked closureBlockedReason automationLog",
+        "complaintNumber trackingUserId title description category priority status trackingStatus trackingHistory pnrNumber trainNumber contactMobile contactEmail createdAt resolvedAt assignedDepartment authorityMarkedDone authorityActionNotes customerMarkedDone userId satisfactionRating closureBlocked closureBlockedReason automationLog",
       );
 
     res.status(200).json({

@@ -73,7 +73,10 @@ const Login = () => {
             </div>
           </div>
           <h1 className="text-4xl font-bold text-gradient mb-2">RailMadad</h1>
-          <p className="text-gray-600">Login to track your complaint status</p>
+          <p className="text-gray-600">
+            Registered user login. Complaint tracking without login is available
+            from the public tracker.
+          </p>
         </div>
 
         {/* ── File a Complaint CTA ────────────────────────────────────────────── */}
@@ -112,6 +115,13 @@ const Login = () => {
           <h2 className="text-2xl font-bold text-railway-dark mb-5">
             Login to Your Account
           </h2>
+          <p className="text-sm text-gray-500 mb-5">
+            If you received a tracking ID and password by SMS or email, use{" "}
+            <Link to="/track" className="text-railway-blue font-semibold hover:underline">
+              Track Complaint
+            </Link>{" "}
+            instead of this login form.
+          </p>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>

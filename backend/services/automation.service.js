@@ -1,7 +1,9 @@
 const cron = require("node-cron");
 const Complaint = require("../models/Complaint");
+const {
+  sendComplaintProgressUpdate,
+} = require("./complaintTracking.service");
 
-// ─── Department mapping by category ──────────────────────────────────────────
 const CATEGORY_DEPARTMENT_MAP = {
   cleanliness: "maintenance",
   safety: "security",
@@ -17,18 +19,29 @@ const CATEGORY_DEPARTMENT_MAP = {
   other: "customer_service",
 };
 
-// ─── SLA hours by priority ────────────────────────────────────────────────────
 const SLA_HOURS = {
-  urgent: 4, // must resolve in 4 hours
-  high: 24, // 1 day
-  medium: 72, // 3 days
-  low: 168, // 7 days
+  urgent: 4,
+  high: 24,
+  medium: 72,
+  low: 168,
 };
 
-/**
- * Assign department & SLA deadline when a complaint is created.
- * Called immediately in complaint controller — no delay.
- */
+const notifyProgressSafely = async ({
+  complaint,
+  previousTrackingStatus,
+  previousStatus,
+}) => {
+  try {
+    await sendComplaintProgressUpdate({
+      complaint,
+      previousTrackingStatus,
+      previousStatus,
+    });
+  } catch (error) {
+    console.error("[AUTOMATION] notification error:", error.message);
+  }
+};
+
 exports.assignDepartmentAndSLA = async (complaint) => {
   const department =
     CATEGORY_DEPARTMENT_MAP[complaint.category] || "customer_service";
@@ -44,49 +57,55 @@ exports.assignDepartmentAndSLA = async (complaint) => {
 
   await complaint.save();
   console.log(
-    `✅ [AUTOMATION] Complaint ${complaint._id} → ${department} (SLA: ${slaHours}h)`,
+    `[AUTOMATION] Complaint ${complaint._id} -> ${department} (SLA: ${slaHours}h)`,
   );
   return complaint;
 };
 
-/**
- * Mark pending complaints as in_progress after 30 minutes of no action.
- * Uses bulkWrite — 1 DB round-trip instead of N saves.
- */
 const autoMarkInProgress = async () => {
   const cutoff = new Date(Date.now() - 30 * 60 * 1000);
   const now = new Date();
+  const complaints = await Complaint.find({
+    status: "pending",
+    createdAt: { $lte: cutoff },
+  });
 
-  const result = await Complaint.bulkWrite([
-    {
-      updateMany: {
-        filter: { status: "pending", createdAt: { $lte: cutoff } },
-        update: {
-          $set: { status: "in_progress", lastAutomationCheck: now },
-          $push: {
-            automationLog: {
-              action: "AUTO_IN_PROGRESS",
-              details:
-                "No action taken within 30 minutes. Automatically moved to in_progress.",
-              performedAt: now,
-            },
-          },
-        },
-      },
-    },
-  ]);
+  for (const complaint of complaints) {
+    const previousTrackingStatus = complaint.trackingStatus;
+    const previousStatus = complaint.status;
 
-  if (result.modifiedCount)
+    complaint.status = "in_progress";
+    complaint.lastAutomationCheck = now;
+    if (complaint.trackingStatus === "registered") {
+      complaint.trackingStatus = "sent_to_authority";
+      complaint.trackingHistory.push({
+        stage: "sent_to_authority",
+        updatedAt: now,
+        note: "Complaint sent to the concerned authority for action.",
+      });
+    }
+    complaint.automationLog.push({
+      action: "AUTO_IN_PROGRESS",
+      details:
+        "No action taken within 30 minutes. Automatically moved to in_progress.",
+      performedAt: now,
+    });
+
+    await complaint.save();
+    await notifyProgressSafely({
+      complaint,
+      previousTrackingStatus,
+      previousStatus,
+    });
+  }
+
+  if (complaints.length > 0) {
     console.log(
-      `🔄 [AUTOMATION] Marked ${result.modifiedCount} complaint(s) as in_progress`,
+      `[AUTOMATION] Marked ${complaints.length} complaint(s) as in_progress`,
     );
+  }
 };
 
-/**
- * Escalate priority for SLA breaches on in_progress complaints.
- * urgent → stays urgent, high → urgent, medium → high, low → medium
- * Uses one bulkWrite with one operation per source-priority level.
- */
 const autoEscalatePriority = async () => {
   const now = new Date();
   const escalationMap = { low: "medium", medium: "high", high: "urgent" };
@@ -104,7 +123,7 @@ const autoEscalatePriority = async () => {
         $push: {
           automationLog: {
             action: "AUTO_ESCALATED",
-            details: `SLA breach! Priority escalated from ${from} → ${to}.`,
+            details: `SLA breach! Priority escalated from ${from} -> ${to}.`,
             performedAt: now,
           },
         },
@@ -113,92 +132,92 @@ const autoEscalatePriority = async () => {
   }));
 
   const result = await Complaint.bulkWrite(ops);
-  if (result.modifiedCount)
-    console.log(
-      `🚨 [AUTOMATION] Escalated ${result.modifiedCount} complaint(s)`,
-    );
+  if (result.modifiedCount) {
+    console.log(`[AUTOMATION] Escalated ${result.modifiedCount} complaint(s)`);
+  }
 };
 
-/**
- * Auto-resolve LOW priority complaints that have been in_progress for 7+ days.
- */
 const autoResolveLowPriority = async () => {
   const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const now = new Date();
+  const complaints = await Complaint.find({
+    status: "in_progress",
+    priority: "low",
+    createdAt: { $lte: cutoff },
+  });
 
-  const result = await Complaint.bulkWrite([
-    {
-      updateMany: {
-        filter: {
-          status: "in_progress",
-          priority: "low",
-          createdAt: { $lte: cutoff },
-        },
-        update: {
-          $set: {
-            status: "resolved",
-            resolvedAt: now,
-            autoResolvedAt: now,
-            lastAutomationCheck: now,
-          },
-          $push: {
-            automationLog: {
-              action: "AUTO_RESOLVED",
-              details:
-                "Low priority complaint automatically resolved after 7 days in progress.",
-              performedAt: now,
-            },
-          },
-        },
-      },
-    },
-  ]);
+  for (const complaint of complaints) {
+    const previousTrackingStatus = complaint.trackingStatus;
+    const previousStatus = complaint.status;
 
-  if (result.modifiedCount)
+    complaint.status = "resolved";
+    complaint.resolvedAt = now;
+    complaint.autoResolvedAt = now;
+    complaint.lastAutomationCheck = now;
+    complaint.trackingStatus = "resolved";
+    complaint.trackingHistory.push({
+      stage: "resolved",
+      updatedAt: now,
+      note: "Complaint resolved automatically after extended processing time.",
+    });
+    complaint.automationLog.push({
+      action: "AUTO_RESOLVED",
+      details:
+        "Low priority complaint automatically resolved after 7 days in progress.",
+      performedAt: now,
+    });
+
+    await complaint.save();
+    await notifyProgressSafely({
+      complaint,
+      previousTrackingStatus,
+      previousStatus,
+    });
+  }
+
+  if (complaints.length > 0) {
     console.log(
-      `✅ [AUTOMATION] Auto-resolved ${result.modifiedCount} low-priority complaint(s)`,
+      `[AUTOMATION] Auto-resolved ${complaints.length} low-priority complaint(s)`,
     );
+  }
 };
 
-/**
- * Auto-reject complaints that have been pending for 30+ days with no action.
- */
 const autoRejectStale = async () => {
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const now = new Date();
+  const complaints = await Complaint.find({
+    status: { $in: ["pending", "in_progress"] },
+    createdAt: { $lte: cutoff },
+    priority: { $nin: ["urgent", "high"] },
+  });
 
-  const result = await Complaint.bulkWrite([
-    {
-      updateMany: {
-        filter: {
-          status: { $in: ["pending", "in_progress"] },
-          createdAt: { $lte: cutoff },
-          priority: { $nin: ["urgent", "high"] },
-        },
-        update: {
-          $set: { status: "rejected", lastAutomationCheck: now },
-          $push: {
-            automationLog: {
-              action: "AUTO_REJECTED",
-              details:
-                "Complaint auto-rejected after 30 days of no resolution.",
-              performedAt: now,
-            },
-          },
-        },
-      },
-    },
-  ]);
+  for (const complaint of complaints) {
+    const previousTrackingStatus = complaint.trackingStatus;
+    const previousStatus = complaint.status;
 
-  if (result.modifiedCount)
+    complaint.status = "rejected";
+    complaint.lastAutomationCheck = now;
+    complaint.automationLog.push({
+      action: "AUTO_REJECTED",
+      details: "Complaint auto-rejected after 30 days of no resolution.",
+      performedAt: now,
+    });
+
+    await complaint.save();
+    await notifyProgressSafely({
+      complaint,
+      previousTrackingStatus,
+      previousStatus,
+    });
+  }
+
+  if (complaints.length > 0) {
     console.log(
-      `❌ [AUTOMATION] Auto-rejected ${result.modifiedCount} stale complaint(s)`,
+      `[AUTOMATION] Auto-rejected ${complaints.length} stale complaint(s)`,
     );
+  }
 };
 
-/**
- * Log automation summary stats every hour
- */
 const logStats = async () => {
   const [pending, inProgress, resolved, urgent] = await Promise.all([
     Complaint.countDocuments({ status: "pending" }),
@@ -209,65 +228,58 @@ const logStats = async () => {
       priority: "urgent",
     }),
   ]);
+
   console.log(
-    `📊 [AUTOMATION STATS] pending:${pending} | in_progress:${inProgress} | resolved:${resolved} | urgent_active:${urgent}`,
+    `[AUTOMATION STATS] pending:${pending} | in_progress:${inProgress} | resolved:${resolved} | urgent_active:${urgent}`,
   );
 };
 
-/**
- * Start all cron jobs
- */
 exports.startAutomation = () => {
-  console.log("🤖 [AUTOMATION] Starting automation engine...");
+  console.log("[AUTOMATION] Starting automation engine...");
 
-  // Every 5 minutes: mark pending → in_progress
   cron.schedule("*/5 * * * *", async () => {
     try {
       await autoMarkInProgress();
-    } catch (e) {
-      console.error("[AUTOMATION] autoMarkInProgress error:", e.message);
+    } catch (error) {
+      console.error("[AUTOMATION] autoMarkInProgress error:", error.message);
     }
   });
 
-  // Every 10 minutes: check SLA breaches and escalate
   cron.schedule("*/10 * * * *", async () => {
     try {
       await autoEscalatePriority();
-    } catch (e) {
-      console.error("[AUTOMATION] autoEscalatePriority error:", e.message);
+    } catch (error) {
+      console.error("[AUTOMATION] autoEscalatePriority error:", error.message);
     }
   });
 
-  // Every hour: auto-resolve old low-priority complaints
   cron.schedule("0 * * * *", async () => {
     try {
       await autoResolveLowPriority();
-    } catch (e) {
-      console.error("[AUTOMATION] autoResolveLowPriority error:", e.message);
+    } catch (error) {
+      console.error("[AUTOMATION] autoResolveLowPriority error:", error.message);
     }
   });
 
-  // Every day at midnight: auto-reject stale complaints
   cron.schedule("0 0 * * *", async () => {
     try {
       await autoRejectStale();
-    } catch (e) {
-      console.error("[AUTOMATION] autoRejectStale error:", e.message);
+    } catch (error) {
+      console.error("[AUTOMATION] autoRejectStale error:", error.message);
     }
   });
 
-  // Every hour: log stats
   cron.schedule("0 * * * *", async () => {
     try {
       await logStats();
-    } catch (e) {
-      console.error("[AUTOMATION] logStats error:", e.message);
+    } catch (error) {
+      console.error("[AUTOMATION] logStats error:", error.message);
     }
   });
 
-  console.log("✅ [AUTOMATION] Engine running:");
-  console.log("   • Every 5 min  → auto in_progress for pending > 30min");
-  console.log("   • Every 10 min → escalate SLA-breached complaints");
-  console.log("   • Every hour   → auto-resolve old low-priority");
-  console.log("   • Daily        → auto-reject stale 30-day complaints");
+  console.log("[AUTOMATION] Engine running:");
+  console.log("   * Every 5 min  -> auto in_progress for pending > 30min");
+  console.log("   * Every 10 min -> escalate SLA-breached complaints");
+  console.log("   * Every hour   -> auto-resolve old low-priority");
+  console.log("   * Daily        -> auto-reject stale 30-day complaints");
 };
