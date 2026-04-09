@@ -2,6 +2,12 @@ const axios = require("axios");
 
 const HUGGINGFACE_API_URL = "https://router.huggingface.co/hf-inference/models";
 const API_KEY = process.env.HUGGINGFACE_API_KEY;
+const CATEGORY_MODEL =
+  process.env.HF_MODEL_CATEGORY || "facebook/bart-large-mnli";
+const SENTIMENT_MODEL =
+  process.env.HF_MODEL_SENTIMENT ||
+  "distilbert/distilbert-base-uncased-finetuned-sst-2-english";
+const RESPONSE_MODEL = process.env.HF_MODEL_RESPONSE || "openai-community/gpt2";
 
 // Helper function to make API calls to Hugging Face
 const queryHuggingFace = async (model, data) => {
@@ -40,7 +46,7 @@ exports.categorizeComplaint = async (text) => {
       "other",
     ];
 
-    const result = await queryHuggingFace("facebook/bart-large-mnli", {
+    const result = await queryHuggingFace(CATEGORY_MODEL, {
       inputs: text,
       parameters: { candidate_labels: categories },
     });
@@ -55,6 +61,10 @@ exports.categorizeComplaint = async (text) => {
           }))
         : [];
     sorted.sort((a, b) => b.score - a.score);
+
+    if (!sorted.length || !sorted[0]?.label) {
+      throw new Error("No valid category predictions returned by model");
+    }
 
     const topCategory = sorted[0].label.replace(/ /g, "_");
     const confidence = sorted[0].score;
@@ -80,13 +90,13 @@ exports.categorizeComplaint = async (text) => {
 // Analyze sentiment of complaint
 exports.analyzeSentiment = async (text) => {
   try {
-    const result = await queryHuggingFace(
-      "distilbert/distilbert-base-uncased-finetuned-sst-2-english",
-      { inputs: text },
-    );
+    const result = await queryHuggingFace(SENTIMENT_MODEL, { inputs: text });
 
     // New format: [[{ label, score }, ...]] or [{ label, score }, ...]
     const inner = Array.isArray(result[0]) ? result[0] : result;
+    if (!Array.isArray(inner) || !inner.length || !inner[0]?.label) {
+      throw new Error("No valid sentiment predictions returned by model");
+    }
     const top = inner.sort((a, b) => b.score - a.score)[0];
     const sentiment = top.label.toLowerCase();
     const score = top.score;
@@ -169,13 +179,21 @@ exports.generateSuggestedResponse = async (complaintText, category) => {
   try {
     const prompt = `As a railway customer service representative, write a professional and empathetic response to this ${category} complaint: "${complaintText}". Keep it brief and helpful.`;
 
-    const result = await queryHuggingFace("gpt2", {
+    const result = await queryHuggingFace(RESPONSE_MODEL, {
       inputs: prompt,
       parameters: {
         max_length: 150,
         temperature: 0.7,
       },
     });
+
+    if (
+      !Array.isArray(result) ||
+      !result.length ||
+      !result[0]?.generated_text
+    ) {
+      throw new Error("No generated text returned by model");
+    }
 
     return {
       response: result[0].generated_text.replace(prompt, "").trim(),

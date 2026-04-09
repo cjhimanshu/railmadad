@@ -65,29 +65,29 @@ Welcome to RailMadad! This project is all about making it easier for railway pas
 
 1. **Clone this repo:**
    `bash
- git clone https://github.com/yourusername/railmadad.git
- cd railmadad
- `
+git clone https://github.com/yourusername/railmadad.git
+cd railmadad
+`
 
 2. **Install dependencies:**
    `bash
- cd backend && npm install
- cd ../frontend && npm install
- `
+cd backend && npm install
+cd ../frontend && npm install
+`
 
 3. **Set up your environment variables:** - Copy `.env.example` to `.env` in both `backend/` and `frontend/`. - Fill in your database, API keys, etc.
 
 4. **Start the backend:**
    `bash
- cd backend
- npm start
- `
+cd backend
+npm start
+`
 
 5. **Start the frontend:**
    `bash
- cd frontend
- npm run dev
- `
+cd frontend
+npm run dev
+`
 
 6. **Open your browser:**  
    Go to [http://localhost:5173](http://localhost:5173)
@@ -144,6 +144,9 @@ CLOUDINARY_API_KEY=your_cloudinary_api_key
 CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 
 HUGGINGFACE_API_KEY=your_huggingface_api_key
+HF_MODEL_CATEGORY=facebook/bart-large-mnli
+HF_MODEL_SENTIMENT=distilbert/distilbert-base-uncased-finetuned-sst-2-english
+HF_MODEL_RESPONSE=openai-community/gpt2
 
 RESEND_API_KEY=your_resend_api_key
 RESEND_FROM_EMAIL=onboarding@resend.dev
