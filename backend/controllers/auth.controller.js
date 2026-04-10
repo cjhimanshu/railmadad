@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const { Resend } = require("resend");
 const User = require("../models/User");
-const Complaint = require("../models/Complaint");
+const OtpModel = require("../models/Otp");
 
 // ─── Resend email helper ──────────────────────────────────────────────────────
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -23,6 +23,123 @@ const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE,
   });
+};
+
+const PROFILE_COMPLETION_FIELDS = [
+  { key: "name", label: "Full name" },
+  { key: "email", label: "Email address" },
+  { key: "phone", label: "Mobile number" },
+  { key: "gender", label: "Gender" },
+  { key: "dateOfBirth", label: "Date of birth" },
+  { key: "occupation", label: "Occupation" },
+  { key: "preferredLanguage", label: "Preferred language" },
+  { key: "nationality", label: "Nationality" },
+  { key: "addressLine1", label: "Address line 1" },
+  { key: "city", label: "City" },
+  { key: "district", label: "District" },
+  { key: "state", label: "State" },
+  { key: "pincode", label: "PIN code" },
+];
+
+const isFilledProfileValue = (value) => {
+  if (value === null || value === undefined) {
+    return false;
+  }
+
+  if (typeof value === "string") {
+    return value.trim().length > 0;
+  }
+
+  if (value instanceof Date) {
+    return !Number.isNaN(value.getTime());
+  }
+
+  return true;
+};
+
+const calculateAge = (dateOfBirth) => {
+  if (!dateOfBirth) {
+    return null;
+  }
+
+  const dob = new Date(dateOfBirth);
+  if (Number.isNaN(dob.getTime())) {
+    return null;
+  }
+
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const hasBirthdayPassed =
+    today.getMonth() > dob.getMonth() ||
+    (today.getMonth() === dob.getMonth() &&
+      today.getDate() >= dob.getDate());
+
+  if (!hasBirthdayPassed) {
+    age -= 1;
+  }
+
+  return age >= 0 ? age : null;
+};
+
+const buildProfileCompletion = (user) => {
+  const completedFields = PROFILE_COMPLETION_FIELDS.filter(({ key }) =>
+    isFilledProfileValue(user[key]),
+  );
+
+  return {
+    percentage: Math.round(
+      (completedFields.length / PROFILE_COMPLETION_FIELDS.length) * 100,
+    ),
+    completedFields: completedFields.length,
+    totalFields: PROFILE_COMPLETION_FIELDS.length,
+    missingFields: PROFILE_COMPLETION_FIELDS
+      .filter(({ key }) => !isFilledProfileValue(user[key]))
+      .map(({ label }) => label),
+  };
+};
+
+const serializeUser = (user) => {
+  if (!user) {
+    return null;
+  }
+
+  const record = user.toObject ? user.toObject() : user;
+
+  return {
+    id: record._id,
+    name: record.name,
+    email: record.email,
+    role: record.role,
+    phone: record.phone || "",
+    gender: record.gender || "",
+    dateOfBirth: record.dateOfBirth || null,
+    occupation: record.occupation || "",
+    preferredLanguage: record.preferredLanguage || "",
+    nationality: record.nationality || "",
+    addressLine1: record.addressLine1 || "",
+    addressLine2: record.addressLine2 || "",
+    city: record.city || "",
+    district: record.district || "",
+    state: record.state || "",
+    pincode: record.pincode || "",
+    isOtpUser: Boolean(record.isOtpUser),
+    profileCompletion: buildProfileCompletion(record),
+    demographicsSummary: {
+      age: calculateAge(record.dateOfBirth),
+      location: [record.city, record.district, record.state]
+        .filter(Boolean)
+        .join(", "),
+    },
+  };
+};
+
+const normalizeProfileValue = (value) => {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed || undefined;
 };
 
 // @desc    Register new user
@@ -68,12 +185,7 @@ exports.register = async (req, res, next) => {
       success: true,
       message: "User registered successfully",
       data: {
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-        },
+        user: serializeUser(user),
         token,
       },
     });
@@ -147,12 +259,7 @@ exports.login = async (req, res, next) => {
       success: true,
       message: "Login successful",
       data: {
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-        },
+        user: serializeUser(user),
         token,
       },
     });
@@ -223,12 +330,7 @@ exports.adminLogin = async (req, res, next) => {
       success: true,
       message: "Admin login successful",
       data: {
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-        },
+        user: serializeUser(user),
         token,
       },
     });
@@ -279,12 +381,7 @@ exports.adminRegister = async (req, res, next) => {
       success: true,
       message: "Admin account created successfully",
       data: {
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-        },
+        user: serializeUser(user),
         token,
       },
     });
@@ -535,14 +632,7 @@ exports.verifyOtp = async (req, res, next) => {
       success: true,
       message: "OTP verified. Logged in successfully.",
       data: {
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          phone: user.phone,
-          isOtpUser: user.isOtpUser,
-        },
+        user: serializeUser(user),
         token,
       },
     });
@@ -560,7 +650,82 @@ exports.getMe = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: user,
+      data: serializeUser(user),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update current user profile
+// @route   PUT /api/auth/me
+// @access  Private
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const incomingPhone = normalizeProfileValue(req.body.phone);
+    if (incomingPhone) {
+      const existingPhoneOwner = await User.findOne({
+        phone: incomingPhone,
+        _id: { $ne: req.user.id },
+      });
+
+      if (existingPhoneOwner) {
+        return res.status(400).json({
+          success: false,
+          message: "This mobile number is already linked to another account.",
+        });
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, "name")) {
+      user.name = req.body.name.trim();
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, "phone")) {
+      user.phone = incomingPhone;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, "gender")) {
+      user.gender = normalizeProfileValue(req.body.gender);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, "dateOfBirth")) {
+      user.dateOfBirth = req.body.dateOfBirth
+        ? new Date(req.body.dateOfBirth)
+        : undefined;
+    }
+
+    [
+      "occupation",
+      "preferredLanguage",
+      "nationality",
+      "addressLine1",
+      "addressLine2",
+      "city",
+      "district",
+      "state",
+      "pincode",
+    ].forEach((field) => {
+      if (Object.prototype.hasOwnProperty.call(req.body, field)) {
+        user[field] = normalizeProfileValue(req.body[field]);
+      }
+    });
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      data: serializeUser(user),
     });
   } catch (error) {
     next(error);

@@ -36,6 +36,70 @@ const userSchema = new mongoose.Schema(
       unique: true,
       sparse: true, // allows multiple null — only enforces uniqueness on non-null values
     },
+    gender: {
+      type: String,
+      enum: [
+        "male",
+        "female",
+        "transgender",
+        "non_binary",
+        "prefer_not_to_say",
+      ],
+      default: undefined,
+    },
+    dateOfBirth: {
+      type: Date,
+      default: undefined,
+    },
+    occupation: {
+      type: String,
+      trim: true,
+      maxlength: [80, "Occupation cannot be more than 80 characters"],
+    },
+    preferredLanguage: {
+      type: String,
+      trim: true,
+      maxlength: [50, "Preferred language cannot be more than 50 characters"],
+    },
+    nationality: {
+      type: String,
+      trim: true,
+      maxlength: [60, "Nationality cannot be more than 60 characters"],
+    },
+    addressLine1: {
+      type: String,
+      trim: true,
+      maxlength: [120, "Address line 1 cannot be more than 120 characters"],
+    },
+    addressLine2: {
+      type: String,
+      trim: true,
+      maxlength: [120, "Address line 2 cannot be more than 120 characters"],
+    },
+    city: {
+      type: String,
+      trim: true,
+      maxlength: [60, "City cannot be more than 60 characters"],
+    },
+    district: {
+      type: String,
+      trim: true,
+      maxlength: [60, "District cannot be more than 60 characters"],
+    },
+    state: {
+      type: String,
+      trim: true,
+      maxlength: [60, "State cannot be more than 60 characters"],
+    },
+    pincode: {
+      type: String,
+      trim: true,
+      maxlength: [10, "PIN code cannot be more than 10 characters"],
+    },
+    isOtpUser: {
+      type: Boolean,
+      default: false,
+    },
     isActive: {
       type: Boolean,
       default: true,

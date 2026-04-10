@@ -1,185 +1,191 @@
-import { useState, useEffect } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import { useEffect, useState } from "react";
+import {
+  FaBullseye,
+  FaCheckCircle,
+  FaClipboardList,
+  FaEnvelope,
+  FaExclamationCircle,
+  FaGlobeAsia,
+  FaLanguage,
+  FaMapMarkedAlt,
+  FaMapMarkerAlt,
+  FaPencilAlt,
+  FaPhoneAlt,
+  FaPlus,
+  FaSave,
+  FaSync,
+  FaUserCircle,
+  FaUserShield,
+} from "react-icons/fa";
+import { toast } from "react-toastify";
 import ComplaintForm from "../components/ComplaintForm";
 import ComplaintList from "../components/ComplaintList";
+import Footer from "../components/Footer";
+import Navbar from "../components/Navbar";
+import { useAuth } from "../context/AuthContext";
 import api from "../utils/api";
-import { toast } from "react-toastify";
-import { FaPlus, FaSync } from "react-icons/fa";
 
-// ── Train coaches definition ──────────────────────────────────────────
-const trainCoaches = [
-  { id: "LOCO", label: "Engine", bg: "#111827", loco: true },
-  { id: "H1", label: "H1 · 1AC", bg: "#991b1b" },
-  { id: "A1", label: "A1 · 2AC", bg: "#1e3a8a" },
-  { id: "A2", label: "A2 · 2AC", bg: "#1e3a8a" },
-  { id: "B1", label: "B1 · 3AC", bg: "#1d4ed8" },
-  { id: "B2", label: "B2 · 3AC", bg: "#1d4ed8" },
-  { id: "B3", label: "B3 · 3AC", bg: "#1d4ed8" },
-  { id: "S1", label: "S1 · SL", bg: "#7f1d1d" },
-  { id: "S2", label: "S2 · SL", bg: "#7f1d1d" },
-  { id: "S3", label: "S3 · SL", bg: "#7f1d1d" },
-  { id: "GEN", label: "GEN · 2S", bg: "#374151" },
-  { id: "GRD", label: "🚩 Guard", bg: "#111827" },
-];
-
-// Pre-generated star positions so they don't shift on re-render
-const STARS = Array.from({ length: 40 }, (_, i) => ({
-  id: i,
-  size: (((i * 7 + 3) % 20) / 10 + 1).toFixed(1),
-  top: (i * 37 + 13) % 120,
-  left: (i * 53 + 7) % 100,
-  opacity: (((i * 11 + 5) % 60) / 100 + 0.2).toFixed(2),
-  dur: (((i * 3 + 2) % 30) / 10 + 2).toFixed(1),
-  delay: (((i * 7 + 1) % 30) / 10).toFixed(1),
-}));
-
-const Coach = ({ coach }) => {
-  const w = coach.loco ? 88 : 70;
-  const h = coach.loco ? 62 : 50;
-  return (
-    <div style={{ position: "relative", flexShrink: 0, marginRight: 2 }}>
-      {/* Smoke (loco only) */}
-      {coach.loco && (
-        <div style={{ position: "absolute", top: -28, left: 16 }}>
-          <div
-            className="smoke-1"
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: "rgba(209,213,219,0.8)",
-              position: "absolute",
-              top: 0,
-              left: 0,
-            }}
-          />
-          <div
-            className="smoke-2"
-            style={{
-              width: 12,
-              height: 12,
-              borderRadius: "50%",
-              background: "rgba(209,213,219,0.6)",
-              position: "absolute",
-              top: 2,
-              left: -2,
-            }}
-          />
-          <div
-            className="smoke-3"
-            style={{
-              width: 7,
-              height: 7,
-              borderRadius: "50%",
-              background: "rgba(209,213,219,0.5)",
-              position: "absolute",
-              top: 4,
-              left: 5,
-            }}
-          />
-        </div>
-      )}
-      {/* Coach body */}
-      <div
-        style={{
-          width: w,
-          height: h,
-          backgroundColor: coach.bg,
-          borderRadius: coach.loco ? "10px 14px 0 0" : "6px 6px 0 0",
-          border: "1.5px solid rgba(255,255,255,0.18)",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        {/* Window stripe */}
-        <div
-          style={{
-            position: "absolute",
-            left: 6,
-            right: 6,
-            top: 8,
-            height: 14,
-            background: "rgba(186,230,253,0.55)",
-            borderRadius: 2,
-          }}
-        />
-        {/* Door line (non-loco) */}
-        {!coach.loco && (
-          <div
-            style={{
-              position: "absolute",
-              top: 22,
-              bottom: 0,
-              left: "48%",
-              width: 1,
-              background: "rgba(255,255,255,0.15)",
-            }}
-          />
-        )}
-        {/* Label */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: 4,
-            left: 0,
-            right: 0,
-            textAlign: "center",
-            fontSize: coach.loco ? 9 : 7.5,
-            fontWeight: 800,
-            color: "#fff",
-            letterSpacing: "0.4px",
-            textShadow: "0 1px 2px rgba(0,0,0,0.8)",
-          }}
-        >
-          {coach.label}
-        </div>
-      </div>
-      {/* Wheels */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          paddingLeft: coach.loco ? 10 : 8,
-          paddingRight: coach.loco ? 10 : 8,
-          marginTop: 2,
-        }}
-      >
-        {(coach.loco ? [1, 2, 3] : [1, 2]).map((i) => (
-          <div
-            key={i}
-            style={{
-              width: coach.loco ? 14 : 12,
-              height: coach.loco ? 14 : 12,
-              borderRadius: "50%",
-              background: "#374151",
-              border: "2px solid #6b7280",
-              boxShadow: "0 0 4px rgba(0,0,0,0.5)",
-            }}
-          />
-        ))}
-      </div>
-    </div>
-  );
+const defaultProfileForm = {
+  name: "",
+  phone: "",
+  gender: "",
+  dateOfBirth: "",
+  occupation: "",
+  preferredLanguage: "",
+  nationality: "",
+  addressLine1: "",
+  addressLine2: "",
+  city: "",
+  district: "",
+  state: "",
+  pincode: "",
 };
 
+const genderOptions = [
+  { value: "", label: "Select gender" },
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
+  { value: "transgender", label: "Transgender" },
+  { value: "non_binary", label: "Non-binary" },
+  { value: "prefer_not_to_say", label: "Prefer not to say" },
+];
+
+const buildProfileForm = (profile) => ({
+  name: profile?.name || "",
+  phone: profile?.phone || "",
+  gender: profile?.gender || "",
+  dateOfBirth: profile?.dateOfBirth
+    ? new Date(profile.dateOfBirth).toISOString().slice(0, 10)
+    : "",
+  occupation: profile?.occupation || "",
+  preferredLanguage: profile?.preferredLanguage || "",
+  nationality: profile?.nationality || "",
+  addressLine1: profile?.addressLine1 || "",
+  addressLine2: profile?.addressLine2 || "",
+  city: profile?.city || "",
+  district: profile?.district || "",
+  state: profile?.state || "",
+  pincode: profile?.pincode || "",
+});
+
+const formatDate = (value) => {
+  if (!value) {
+    return "Not added yet";
+  }
+
+  return new Date(value).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const calculateAge = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  const dob = new Date(value);
+  if (Number.isNaN(dob.getTime())) {
+    return null;
+  }
+
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const hasBirthdayPassed =
+    today.getMonth() > dob.getMonth() ||
+    (today.getMonth() === dob.getMonth() && today.getDate() >= dob.getDate());
+
+  if (!hasBirthdayPassed) {
+    age -= 1;
+  }
+
+  return age >= 0 ? age : null;
+};
+
+const profileFieldGroups = [
+  {
+    title: "Basic Details",
+    fields: [
+      { key: "name", label: "Full Name", type: "text", placeholder: "Enter your full name" },
+      { key: "phone", label: "Mobile Number", type: "tel", placeholder: "10-digit mobile number" },
+      { key: "gender", label: "Gender", type: "select" },
+      { key: "dateOfBirth", label: "Date of Birth", type: "date" },
+    ],
+  },
+  {
+    title: "Demographics",
+    fields: [
+      { key: "occupation", label: "Occupation", type: "text", placeholder: "Student, Engineer, Retired, etc." },
+      { key: "preferredLanguage", label: "Preferred Language", type: "text", placeholder: "Hindi, English, Bengali, etc." },
+      { key: "nationality", label: "Nationality", type: "text", placeholder: "Indian" },
+    ],
+  },
+  {
+    title: "Address",
+    fields: [
+      { key: "addressLine1", label: "Address Line 1", type: "text", placeholder: "House number, street, locality" },
+      { key: "addressLine2", label: "Address Line 2", type: "text", placeholder: "Landmark, apartment, area (optional)" },
+      { key: "city", label: "City", type: "text", placeholder: "Enter city" },
+      { key: "district", label: "District", type: "text", placeholder: "Enter district" },
+      { key: "state", label: "State", type: "text", placeholder: "Enter state" },
+      { key: "pincode", label: "PIN Code", type: "text", placeholder: "6-digit PIN code" },
+    ],
+  },
+];
+
 const UserDashboard = () => {
+  const { user, updateUser } = useAuth();
   const [complaints, setComplaints] = useState([]);
+  const [profile, setProfile] = useState(user);
+  const [profileForm, setProfileForm] = useState(buildProfileForm(user));
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
-    fetchComplaints();
+    if (!user) {
+      return;
+    }
+
+    setProfile((currentProfile) => currentProfile || user);
+    setProfileForm((currentForm) => {
+      const isPristine = Object.values(currentForm).every((value) => !value);
+      return isPristine ? buildProfileForm(user) : currentForm;
+    });
+  }, [user]);
+
+  useEffect(() => {
+    loadDashboard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchComplaints = async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
+  const loadDashboard = async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
     try {
-      const response = await api.get("/complaints");
-      setComplaints(response.data.data);
+      const [complaintResult, profileResult] = await Promise.allSettled([
+        api.get("/complaints"),
+        api.get("/auth/me"),
+      ]);
+
+      if (complaintResult.status === "fulfilled") {
+        setComplaints(complaintResult.value.data.data);
+      }
+
+      if (profileResult.status === "fulfilled") {
+        const latestProfile = profileResult.value.data.data;
+        setProfile(latestProfile);
+        setProfileForm(buildProfileForm(latestProfile));
+        updateUser(latestProfile);
+      }
     } catch (error) {
-      console.error("Error fetching complaints:", error);
+      console.error("Error loading dashboard:", error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -188,222 +194,545 @@ const UserDashboard = () => {
 
   const handleComplaintSubmitted = () => {
     setShowForm(false);
-    fetchComplaints();
+    loadDashboard(true);
     toast.success("Complaint submitted successfully!");
   };
 
+  const handleProfileChange = (field, value) => {
+    setProfileForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const handleProfileSave = async (event) => {
+    event.preventDefault();
+    setProfileSaving(true);
+
+    try {
+      const payload = {
+        ...profileForm,
+        phone: profileForm.phone.replace(/\D/g, ""),
+      };
+
+      const response = await api.put("/auth/me", payload);
+      const updatedProfile = response.data.data;
+
+      setProfile(updatedProfile);
+      setProfileForm(buildProfileForm(updatedProfile));
+      updateUser(updatedProfile);
+      toast.success("Profile updated successfully!");
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "Could not save your profile";
+      toast.error(message);
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const completion = profile?.profileCompletion || {
+    percentage: 0,
+    completedFields: 0,
+    totalFields: 13,
+    missingFields: [],
+  };
+  const profileAge = calculateAge(profile?.dateOfBirth);
+  const profileLocation =
+    profile?.demographicsSummary?.location ||
+    [profile?.city, profile?.district, profile?.state].filter(Boolean).join(", ");
+  const pendingCount = complaints.filter((item) => item.status === "pending").length;
+  const inProgressCount = complaints.filter(
+    (item) => item.status === "in_progress",
+  ).length;
+  const resolvedCount = complaints.filter(
+    (item) => item.status === "resolved",
+  ).length;
+
+  const profileSuggestions =
+    completion.missingFields.length > 0
+      ? [
+          `Complete ${completion.missingFields[0]} to improve your profile coverage.`,
+          "Keep your mobile number current so complaint updates always reach you.",
+          "Address details help railway teams understand your travel region faster.",
+        ]
+      : [
+          "Your profile is complete and ready for faster complaint support.",
+          "You can update your demographics any time if your details change.",
+          "A complete profile makes future complaint filing quicker.",
+        ];
+
+  const profileSummaryRows = [
+    {
+      icon: FaEnvelope,
+      label: "Email",
+      value: profile?.email || "Not available",
+    },
+    {
+      icon: FaPhoneAlt,
+      label: "Mobile",
+      value: profile?.phone || "Add mobile number",
+    },
+    {
+      icon: FaUserShield,
+      label: "Gender / Age",
+      value:
+        [profile?.gender?.replace(/_/g, " "), profileAge ? `${profileAge} yrs` : ""]
+          .filter(Boolean)
+          .join(" • ") || "Add demographics",
+    },
+    {
+      icon: FaLanguage,
+      label: "Language",
+      value: profile?.preferredLanguage || "Add preferred language",
+    },
+    {
+      icon: FaGlobeAsia,
+      label: "Nationality",
+      value: profile?.nationality || "Add nationality",
+    },
+    {
+      icon: FaMapMarkedAlt,
+      label: "Location",
+      value: profileLocation || "Add city, district and state",
+    },
+  ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50">
+        <Navbar />
+        <div className="flex justify-center items-center py-24">
+          <div className="w-12 h-12 border-4 border-blue-400 border-t-transparent rounded-full animate-spin" />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50">
       <Navbar />
 
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* ── Train Hero Banner ─────────────────────────────────── */}
-        <div
-          className="mb-8 rounded-2xl overflow-hidden shadow-2xl animate-fade-in relative"
-          style={{
-            background:
-              "linear-gradient(160deg, #020818 0%, #0d1b3e 45%, #162447 100%)",
-          }}
-        >
-          {/* Stars background */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              pointerEvents: "none",
-              zIndex: 0,
-            }}
-          >
-            {STARS.map((s) => (
-              <div
-                key={s.id}
-                style={{
-                  position: "absolute",
-                  width: s.size + "px",
-                  height: s.size + "px",
-                  borderRadius: "50%",
-                  background: "#fff",
-                  top: s.top + "px",
-                  left: s.left + "%",
-                  opacity: s.opacity,
-                  animation: `twinkle ${s.dur}s ease-in-out ${s.delay}s infinite`,
-                }}
-              />
-            ))}
+      <div className="container mx-auto max-w-7xl px-4 py-8">
+        <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-900 via-blue-900 to-orange-600 p-8 text-white shadow-2xl">
+          <div className="absolute inset-0 opacity-20">
+            <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-orange-300 blur-3xl" />
+            <div className="absolute left-12 top-10 h-32 w-32 rounded-full bg-blue-300 blur-3xl" />
+            <div className="absolute bottom-0 right-1/3 h-24 w-64 rounded-full bg-white/20 blur-2xl" />
           </div>
 
-          {/* Train name */}
-          <div className="relative z-10 text-center pt-10 pb-3 px-4">
-            <p
-              className="text-xs font-bold uppercase tracking-[0.35em] mb-3"
-              style={{ color: "#60a5fa" }}
-            >
-              🇮🇳 &nbsp; Indian Railways &nbsp; • &nbsp; Ministry of Railways,
-              Govt. of India
-            </p>
-            <h1
-              className="font-black text-white leading-none"
-              style={{
-                fontSize: "clamp(3rem, 10vw, 6rem)",
-                letterSpacing: "0.12em",
-                textShadow:
-                  "0 0 40px rgba(59,130,246,0.7), 0 4px 12px rgba(0,0,0,0.5)",
-              }}
-            >
-              RAJDHANI
-            </h1>
-            <h2
-              className="font-black leading-none"
-              style={{
-                fontSize: "clamp(2rem, 7vw, 4rem)",
-                letterSpacing: "0.25em",
-                color: "#f97316",
-                textShadow: "0 0 30px rgba(249,115,22,0.6)",
-                marginTop: 4,
-              }}
-            >
-              EXPRESS
-            </h2>
-            <div className="flex justify-center items-center gap-3 mt-4 flex-wrap">
-              <span
-                className="text-sm font-semibold"
-                style={{ color: "#93c5fd" }}
-              >
-                🏙️ New Delhi (NDLS)
-              </span>
-              <span
-                className="font-bold text-xs tracking-widest"
-                style={{ color: "#f97316" }}
-              >
-                ━━━━━▶
-              </span>
-              <span
-                className="text-sm font-semibold"
-                style={{ color: "#93c5fd" }}
-              >
-                🌊 Mumbai Central (BCT)
-              </span>
-            </div>
-            <p
-              className="text-xs mt-2"
-              style={{ color: "#60a5fa", opacity: 0.7 }}
-            >
-              Train No. 12951 / 12952 &nbsp;|&nbsp; Daily Service &nbsp;|&nbsp;
-              Superfast Express
-            </p>
-          </div>
+          <div className="relative grid gap-6 lg:grid-cols-[1.5fr,0.9fr]">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.4em] text-blue-100">
+                Passenger Dashboard
+              </p>
+              <h1 className="mt-3 text-3xl font-black md:text-5xl">
+                Complaint tracking and profile in one place
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm leading-6 text-blue-100 md:text-base">
+                Keep your demographic details complete, file complaints faster,
+                and monitor every railway issue without losing your history.
+              </p>
 
-          {/* ── Animated Train ── */}
-          <div
-            className="relative overflow-hidden mt-4"
-            style={{ height: 110 }}
-          >
-            {/* Sky gradient fade */}
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                background:
-                  "linear-gradient(to bottom, transparent 0%, rgba(2,8,24,0.3) 100%)",
-              }}
-            />
-            {/* Track rails */}
-            <div
-              className="track-anim"
-              style={{
-                position: "absolute",
-                bottom: 18,
-                left: 0,
-                right: 0,
-                height: 6,
-                borderTop: "2px solid #6b7280",
-                borderBottom: "2px solid #6b7280",
-                backgroundColor: "#374151",
-              }}
-            />
-            {/* Train */}
-            <div
-              className="train-roll"
-              style={{
-                position: "absolute",
-                bottom: 24,
-                left: 0,
-                display: "flex",
-                alignItems: "flex-end",
-              }}
-            >
-              {trainCoaches.map((coach) => (
-                <Coach key={coach.id} coach={coach} />
-              ))}
-            </div>
-          </div>
-
-          {/* Coach legend */}
-          <div className="flex flex-wrap justify-center gap-3 px-6 pb-6 pt-1">
-            {[
-              { label: "1st AC (H1)", color: "#991b1b" },
-              { label: "2nd AC (A1–A2)", color: "#1e3a8a" },
-              { label: "3rd AC (B1–B3)", color: "#1d4ed8" },
-              { label: "Sleeper (S1–S3)", color: "#7f1d1d" },
-              { label: "General (GEN)", color: "#374151" },
-            ].map((l) => (
-              <div key={l.label} className="flex items-center gap-2">
-                <div
-                  style={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: 2,
-                    backgroundColor: l.color,
-                    border: "1px solid rgba(255,255,255,0.3)",
-                  }}
-                />
-                <span
-                  className="text-xs font-semibold"
-                  style={{ color: "#cbd5e1" }}
+              <div className="mt-6 flex flex-wrap gap-3">
+                <button
+                  onClick={() => setShowForm((current) => !current)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-slate-900 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl"
                 >
-                  {l.label}
+                  <FaPlus />
+                  {showForm ? "Hide Complaint Form" : "Raise New Complaint"}
+                </button>
+                <button
+                  onClick={() => loadDashboard(true)}
+                  disabled={refreshing}
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/30 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/20 disabled:opacity-60"
+                >
+                  <FaSync className={refreshing ? "animate-spin" : ""} />
+                  {refreshing ? "Refreshing..." : "Refresh Dashboard"}
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-xl">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-orange-100">
+                    Profile completion
+                  </p>
+                  <p className="mt-2 text-4xl font-black">
+                    {completion.percentage}%
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-white/15 p-3">
+                  <FaUserCircle className="text-2xl text-white" />
+                </div>
+              </div>
+
+              <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/15">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-orange-300 via-amber-200 to-white"
+                  style={{ width: `${completion.percentage}%` }}
+                />
+              </div>
+
+              <div className="mt-4 flex items-center justify-between text-sm text-blue-50">
+                <span>
+                  {completion.completedFields} of {completion.totalFields} profile
+                  fields completed
+                </span>
+                <span className="font-semibold">
+                  {completion.missingFields.length} left
                 </span>
               </div>
-            ))}
+
+              <div className="mt-5 rounded-2xl bg-white/10 p-4 text-sm text-blue-50">
+                <p className="font-semibold text-white">Why this matters</p>
+                <p className="mt-2 leading-6">
+                  A complete profile helps show the right demographic context,
+                  improves future complaint filing, and keeps your contact
+                  details ready for follow-up.
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
-        {/* ─────────────────────────────────────────────────────── */}
+        </section>
 
-        {/* Action Buttons */}
-        <div className="flex flex-wrap gap-3 mb-6">
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="btn-primary flex items-center gap-2"
-          >
-            <FaPlus />
-            {showForm ? "Hide Form" : "New Complaint"}
-          </button>
-          <button
-            onClick={() => fetchComplaints(true)}
-            disabled={refreshing}
-            className="btn-secondary flex items-center gap-2 disabled:opacity-60"
-          >
-            <FaSync className={refreshing ? "animate-spin" : ""} />
-            {refreshing ? "Refreshing..." : "Refresh"}
-          </button>
-        </div>
+        <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {[
+            {
+              label: "Total Complaints",
+              value: complaints.length,
+              tone: "from-blue-50 to-white border-blue-200 text-blue-700",
+              icon: FaClipboardList,
+            },
+            {
+              label: "Pending",
+              value: pendingCount,
+              tone: "from-amber-50 to-white border-amber-200 text-amber-700",
+              icon: FaExclamationCircle,
+            },
+            {
+              label: "In Progress",
+              value: inProgressCount,
+              tone: "from-indigo-50 to-white border-indigo-200 text-indigo-700",
+              icon: FaBullseye,
+            },
+            {
+              label: "Resolved",
+              value: resolvedCount,
+              tone: "from-emerald-50 to-white border-emerald-200 text-emerald-700",
+              icon: FaCheckCircle,
+            },
+          ].map((item) => {
+            const Icon = item.icon;
 
-        {/* Complaint Form */}
-        {showForm && (
-          <div className="mb-6 animate-slide-up">
+            return (
+              <div
+                key={item.label}
+                className={`rounded-2xl border bg-gradient-to-br p-5 shadow-sm ${item.tone}`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-500">
+                      {item.label}
+                    </p>
+                    <p className="mt-2 text-3xl font-black text-slate-900">
+                      {item.value}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-white p-3 shadow-sm">
+                    <Icon className={`text-xl ${item.tone.split(" ").pop()}`} />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </section>
+
+        <section className="mt-8 grid gap-6 xl:grid-cols-[1.4fr,0.8fr]">
+          <div className="rounded-[2rem] border border-white/60 bg-white/80 p-6 shadow-xl backdrop-blur">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-500">
+                  Complete Profile
+                </p>
+                <h2 className="mt-2 text-2xl font-black text-slate-900">
+                  Add your full demographic details
+                </h2>
+              </div>
+              <span className="inline-flex items-center rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700">
+                {completion.percentage}% complete
+              </span>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-blue-800">
+                    Profile progress
+                  </p>
+                  <p className="text-sm text-blue-700">
+                    Fill in every demographic field so your profile is complete
+                    and visible in one place.
+                  </p>
+                </div>
+                <div className="text-sm font-semibold text-blue-700">
+                  Missing: {completion.missingFields.length}
+                </div>
+              </div>
+
+              <div className="mt-4 h-3 overflow-hidden rounded-full bg-white">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-blue-500 to-orange-500"
+                  style={{ width: `${completion.percentage}%` }}
+                />
+              </div>
+
+              {completion.missingFields.length > 0 ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {completion.missingFields.map((item) => (
+                    <span
+                      key={item}
+                      className="rounded-full border border-blue-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-4 text-sm font-semibold text-emerald-700">
+                  Your demographic profile is complete.
+                </p>
+              )}
+            </div>
+
+            <form onSubmit={handleProfileSave} className="mt-6 space-y-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Email Address
+                  </label>
+                  <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                    <FaEnvelope className="text-blue-500" />
+                    <span>{profile?.email || "Email not available"}</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Profile Coverage
+                  </label>
+                  <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+                    <FaCheckCircle />
+                    <span>
+                      {completion.completedFields} fields completed out of{" "}
+                      {completion.totalFields}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {profileFieldGroups.map((group) => (
+                <div key={group.title}>
+                  <div className="mb-4 flex items-center gap-2">
+                    <div className="h-px flex-1 bg-slate-200" />
+                    <h3 className="text-sm font-bold uppercase tracking-[0.25em] text-slate-500">
+                      {group.title}
+                    </h3>
+                    <div className="h-px flex-1 bg-slate-200" />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {group.fields.map((field) => (
+                      <div
+                        key={field.key}
+                        className={
+                          field.key === "addressLine1" ||
+                          field.key === "addressLine2"
+                            ? "md:col-span-2"
+                            : ""
+                        }
+                      >
+                        <label className="mb-2 block text-sm font-semibold text-slate-700">
+                          {field.label}
+                        </label>
+
+                        {field.type === "select" ? (
+                          <select
+                            value={profileForm[field.key]}
+                            onChange={(event) =>
+                              handleProfileChange(field.key, event.target.value)
+                            }
+                            className="input-field bg-white"
+                          >
+                            {genderOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type={field.type}
+                            value={profileForm[field.key]}
+                            onChange={(event) =>
+                              handleProfileChange(field.key, event.target.value)
+                            }
+                            className="input-field bg-white"
+                            placeholder={field.placeholder}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="submit"
+                  disabled={profileSaving}
+                  className="btn-primary inline-flex items-center gap-2"
+                >
+                  <FaSave />
+                  {profileSaving ? "Saving Profile..." : "Save Profile"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProfileForm(buildProfileForm(profile))}
+                  disabled={profileSaving}
+                  className="btn-secondary inline-flex items-center gap-2"
+                >
+                  <FaPencilAlt />
+                  Reset Changes
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div className="space-y-6">
+            <div className="rounded-[2rem] border border-orange-100 bg-white/85 p-6 shadow-xl backdrop-blur">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.25em] text-orange-500">
+                    Profile Preview
+                  </p>
+                  <h2 className="mt-2 text-2xl font-black text-slate-900">
+                    Your saved demographics
+                  </h2>
+                </div>
+                <div className="rounded-2xl bg-orange-100 p-3 text-orange-600">
+                  <FaUserCircle className="text-xl" />
+                </div>
+              </div>
+
+              <div className="mt-5 space-y-3">
+                {profileSummaryRows.map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <div
+                      key={item.label}
+                      className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3"
+                    >
+                      <div className="rounded-xl bg-white p-2 text-blue-600 shadow-sm">
+                        <Icon className="text-sm" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                          {item.label}
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-slate-700">
+                          {item.value}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-600">
+                <p>
+                  <strong>Date of birth:</strong> {formatDate(profile?.dateOfBirth)}
+                </p>
+                <p className="mt-2">
+                  <strong>Address:</strong>{" "}
+                  {[profile?.addressLine1, profile?.addressLine2]
+                    .filter(Boolean)
+                    .join(", ") || "Add your full address"}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-[2rem] border border-blue-100 bg-gradient-to-br from-white via-blue-50 to-orange-50 p-6 shadow-xl">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-500">
+                    Useful Suggestions
+                  </p>
+                  <h2 className="mt-2 text-2xl font-black text-slate-900">
+                    Keep this dashboard useful
+                  </h2>
+                </div>
+                <div className="rounded-2xl bg-blue-100 p-3 text-blue-600">
+                  <FaBullseye className="text-xl" />
+                </div>
+              </div>
+
+              <div className="mt-5 space-y-3">
+                {profileSuggestions.map((item) => (
+                  <div
+                    key={item}
+                    className="rounded-2xl border border-white bg-white/90 p-4 text-sm leading-6 text-slate-600 shadow-sm"
+                  >
+                    {item}
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-orange-100 bg-orange-50 p-4 text-sm text-orange-900">
+                <div className="flex items-center gap-2 font-semibold">
+                  <FaMapMarkerAlt />
+                  Profile readiness tip
+                </div>
+                <p className="mt-2 leading-6">
+                  Keep your phone, location, and language updated. Those three
+                  details help the team contact you faster and understand your
+                  situation more clearly.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {showForm ? (
+          <section className="mt-8 animate-slide-up">
             <ComplaintForm onSubmitSuccess={handleComplaintSubmitted} />
-          </div>
-        )}
+          </section>
+        ) : null}
 
-        {/* Complaints List */}
-        {loading ? (
-          <div className="flex justify-center items-center py-16">
-            <div className="w-12 h-12 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+        <section className="mt-8 rounded-[2rem] border border-white/60 bg-white/80 p-6 shadow-xl backdrop-blur">
+          <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-500">
+                Complaint Records
+              </p>
+              <h2 className="mt-2 text-2xl font-black text-slate-900">
+                Every complaint in one history view
+              </h2>
+            </div>
+            <div className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600">
+              {complaints.length} total records
+            </div>
           </div>
-        ) : (
-          <ComplaintList complaints={complaints} onUpdate={fetchComplaints} />
-        )}
+
+          <ComplaintList
+            complaints={complaints}
+            onUpdate={() => loadDashboard(true)}
+          />
+        </section>
       </div>
+
       <Footer />
     </div>
   );
