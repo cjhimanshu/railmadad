@@ -1,135 +1,235 @@
-import { useState, useEffect, useCallback } from "react";
-import api from "../utils/api";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import api from "../utils/api";
 import {
-  FaFilter,
-  FaEdit,
-  FaSave,
-  FaTimes,
   FaCheckCircle,
-  FaExclamationTriangle,
-  FaClock,
-  FaUser,
-  FaStar,
-  FaLock,
-  FaUnlock,
-  FaTools,
-  FaPhone,
-  FaEnvelope,
-  FaTicketAlt,
-  FaRobot,
   FaChevronDown,
   FaChevronUp,
-  FaBroom,
-  FaShieldAlt,
-  FaUserTie,
-  FaBuilding,
-  FaTrain,
-  FaUtensils,
-  FaHammer,
-  FaQuestionCircle,
+  FaClock,
+  FaEdit,
+  FaEnvelope,
+  FaFilter,
+  FaLock,
+  FaPhone,
   FaRedo,
-  FaUserMinus,
-  FaMoneyBillWave,
+  FaSave,
+  FaSearch,
+  FaTimes,
+  FaTools,
+  FaUser,
 } from "react-icons/fa";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-const CATEGORIES = [
-  { key: "all", label: "All", icon: FaFilter },
-  { key: "cleanliness", label: "Cleanliness", icon: FaBroom },
-  { key: "safety", label: "Safety", icon: FaShieldAlt },
-  { key: "staff_behavior", label: "Staff Behavior", icon: FaUserTie },
-  { key: "staff_complaint", label: "Staff Complaint", icon: FaUserMinus },
-  { key: "overcharging", label: "Overcharging", icon: FaMoneyBillWave },
-  { key: "facilities", label: "Facilities", icon: FaBuilding },
-  { key: "ticketing", label: "Ticketing", icon: FaTicketAlt },
-  { key: "punctuality", label: "Punctuality", icon: FaTrain },
-  { key: "food_quality", label: "Food Quality", icon: FaUtensils },
-  { key: "infrastructure", label: "Infrastructure", icon: FaHammer },
-  { key: "other", label: "Other", icon: FaQuestionCircle },
+const CATEGORY_OPTIONS = [
+  { value: "", label: "All categories" },
+  { value: "cleanliness", label: "Cleanliness" },
+  { value: "safety", label: "Safety" },
+  { value: "staff_behavior", label: "Staff behavior" },
+  { value: "staff_complaint", label: "Staff complaint" },
+  { value: "overcharging", label: "Overcharging" },
+  { value: "facilities", label: "Facilities" },
+  { value: "ticketing", label: "Ticketing" },
+  { value: "punctuality", label: "Punctuality" },
+  { value: "food_quality", label: "Food quality" },
+  { value: "infrastructure", label: "Infrastructure" },
+  {
+    value: "seat_occupied_by_other",
+    label: "Seat occupied by other passenger",
+  },
+  { value: "other", label: "Other" },
+];
+
+const STATUS_OPTIONS = [
+  { value: "", label: "All status" },
+  { value: "pending", label: "Pending" },
+  { value: "in_progress", label: "In progress" },
+  { value: "resolved", label: "Resolved" },
+  { value: "rejected", label: "Rejected" },
+];
+
+const PRIORITY_OPTIONS = [
+  { value: "", label: "All priority" },
+  { value: "urgent", label: "Urgent" },
+  { value: "high", label: "High" },
+  { value: "medium", label: "Medium" },
+  { value: "low", label: "Low" },
 ];
 
 const STATUS_STYLES = {
-  pending: "bg-yellow-100 text-yellow-800 border-yellow-300",
-  in_progress: "bg-blue-100 text-blue-800 border-blue-300",
-  resolved: "bg-green-100 text-green-800 border-green-300",
-  rejected: "bg-red-100 text-red-800 border-red-300",
+  pending: "bg-amber-50 text-amber-700 border-amber-200",
+  in_progress: "bg-blue-50 text-blue-700 border-blue-200",
+  resolved: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  rejected: "bg-rose-50 text-rose-700 border-rose-200",
 };
+
 const PRIORITY_STYLES = {
-  urgent: "bg-red-100 text-red-800 border-red-300",
-  high: "bg-orange-100 text-orange-800 border-orange-300",
-  medium: "bg-yellow-100 text-yellow-800 border-yellow-300",
-  low: "bg-green-100 text-green-800 border-green-300",
+  urgent: "bg-rose-50 text-rose-700 border-rose-200",
+  high: "bg-orange-50 text-orange-700 border-orange-200",
+  medium: "bg-sky-50 text-sky-700 border-sky-200",
+  low: "bg-slate-50 text-slate-700 border-slate-200",
 };
 
-const formatDate = (d) =>
-  d
-    ? new Date(d).toLocaleDateString("en-IN", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "—";
+const PRIORITY_CARD_STYLES = {
+  urgent: {
+    shell: "from-rose-50 via-white to-orange-50 border-rose-200",
+    strip: "from-rose-500 via-orange-500 to-amber-400",
+    shadow: "shadow-rose-100",
+  },
+  high: {
+    shell: "from-orange-50 via-white to-amber-50 border-orange-200",
+    strip: "from-orange-500 via-amber-500 to-yellow-400",
+    shadow: "shadow-orange-100",
+  },
+  medium: {
+    shell: "from-sky-50 via-white to-indigo-50 border-sky-200",
+    strip: "from-sky-500 via-blue-500 to-indigo-500",
+    shadow: "shadow-blue-100",
+  },
+  low: {
+    shell: "from-emerald-50 via-white to-teal-50 border-emerald-200",
+    strip: "from-emerald-500 via-teal-500 to-cyan-500",
+    shadow: "shadow-emerald-100",
+  },
+};
 
-// ─── Star Rating Display ──────────────────────────────────────────────────────
-const StarDisplay = ({ rating }) => {
-  if (!rating)
-    return <span className="text-gray-400 text-xs italic">No rating yet</span>;
-  const color =
-    rating >= 4
-      ? "text-green-500"
-      : rating >= 3
-        ? "text-yellow-400"
-        : "text-red-500";
+const TRACKING_LABELS = {
+  registered: "Registered",
+  sent_to_authority: "Sent to authority",
+  authority_taken_action: "Action taken",
+  resolved: "Resolved",
+};
+
+const HISTORY_STYLES = {
+  record: {
+    line: "bg-blue-500",
+    shell: "border-blue-200 bg-blue-50/70",
+    label: "text-blue-800",
+  },
+  tracking: {
+    line: "bg-orange-500",
+    shell: "border-orange-200 bg-orange-50/70",
+    label: "text-orange-800",
+  },
+  system: {
+    line: "bg-emerald-500",
+    shell: "border-emerald-200 bg-emerald-50/70",
+    label: "text-emerald-800",
+  },
+};
+
+const TONE_STYLES = {
+  blue: "border-blue-200 bg-gradient-to-br from-blue-50 to-white",
+  amber: "border-amber-200 bg-gradient-to-br from-amber-50 to-white",
+  slate: "border-slate-200 bg-gradient-to-br from-slate-50 to-white",
+  emerald: "border-emerald-200 bg-gradient-to-br from-emerald-50 to-white",
+  rose: "border-rose-200 bg-gradient-to-br from-rose-50 to-white",
+};
+
+const formatDate = (value) =>
+  value
+    ? new Date(value).toLocaleString("en-IN", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      })
+    : "-";
+
+const humanize = (value) =>
+  String(value || "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const RecordPill = ({ value, type = "status" }) => {
+  const styles = type === "priority" ? PRIORITY_STYLES : STATUS_STYLES;
+
   return (
-    <span className={`flex items-center gap-0.5 font-semibold ${color}`}>
-      {[1, 2, 3, 4, 5].map((s) => (
-        <FaStar key={s} className={s <= rating ? "" : "opacity-20"} />
-      ))}
-      <span className="ml-1 text-sm">{rating}/5</span>
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${styles[value] || "bg-slate-50 text-slate-700 border-slate-200"}`}
+    >
+      {humanize(value)}
     </span>
   );
 };
 
-// ─── Closure status indicator ─────────────────────────────────────────────────
-const ClosureStatus = ({ c }) => {
-  if (c.status === "resolved") {
+const InfoRow = ({ label, value, mono = false }) => (
+  <div className="flex items-start justify-between gap-3 py-2 text-sm">
+    <span className="text-slate-500">{label}</span>
+    <span
+      className={`text-right text-slate-800 ${mono ? "font-mono text-xs sm:text-sm" : ""}`}
+    >
+      {value || "-"}
+    </span>
+  </div>
+);
+
+const SectionCard = ({ title, children, tone = "slate" }) => (
+  <div className={`rounded-2xl border p-4 shadow-sm ${TONE_STYLES[tone]}`}>
+    <h4 className="mb-3 text-sm font-semibold text-slate-800">{title}</h4>
+    {children}
+  </div>
+);
+
+const ComplaintHistory = ({ complaint }) => {
+  const recordEntries = [
+    {
+      time: complaint.createdAt,
+      label: "Complaint created",
+      detail: complaint.complaintNumber
+        ? `Record opened for ${complaint.complaintNumber}.`
+        : "Complaint record created.",
+      type: "record",
+    },
+    ...(complaint.trackingHistory || []).map((entry) => ({
+      time: entry.updatedAt,
+      label: TRACKING_LABELS[entry.stage] || humanize(entry.stage),
+      detail: entry.note || "Tracking status updated.",
+      type: "tracking",
+    })),
+    ...(complaint.automationLog || []).map((entry) => ({
+      time: entry.performedAt,
+      label: humanize(entry.action),
+      detail: entry.details || "System activity recorded.",
+      type: "system",
+    })),
+  ].sort((a, b) => new Date(b.time) - new Date(a.time));
+
+  if (recordEntries.length === 0) {
     return (
-      <div className="flex items-center gap-1 text-green-700 font-semibold text-sm bg-green-50 rounded-lg px-3 py-1 border border-green-200">
-        <FaCheckCircle /> Closed — Dual Verified
-      </div>
+      <SectionCard title="Record History" tone="slate">
+        <p className="text-sm text-slate-500">No history available yet.</p>
+      </SectionCard>
     );
   }
-  if (c.closureBlocked) {
-    return (
-      <div className="flex items-center gap-1 text-red-700 text-sm bg-red-50 rounded-lg px-3 py-1 border border-red-200">
-        <FaLock /> Blocked — Low Rating ({c.satisfactionRating}/5)
-      </div>
-    );
-  }
+
   return (
-    <div className="flex flex-col gap-1 text-xs">
-      <span
-        className={`flex items-center gap-1 ${c.authorityMarkedDone ? "text-green-700" : "text-gray-400"}`}
-      >
-        {c.authorityMarkedDone ? <FaCheckCircle /> : <FaClock />}
-        Authority action {c.authorityMarkedDone ? "taken ✓" : "pending"}
-      </span>
-      <span
-        className={`flex items-center gap-1 ${c.customerMarkedDone ? "text-green-700" : "text-gray-400"}`}
-      >
-        {c.customerMarkedDone ? <FaCheckCircle /> : <FaClock />}
-        Customer confirmed {c.customerMarkedDone ? "✓" : "pending"}
-      </span>
-      {c.satisfactionRating && <StarDisplay rating={c.satisfactionRating} />}
-    </div>
+    <SectionCard title="Record History" tone="slate">
+      <div className="space-y-3">
+        {recordEntries.map((entry, index) => {
+          const style = HISTORY_STYLES[entry.type] || HISTORY_STYLES.system;
+
+          return (
+            <div key={`${entry.label}-${entry.time}-${index}`} className="flex gap-3">
+              <div className="flex w-4 justify-center">
+                <span className={`mt-2 h-2.5 w-2.5 rounded-full ${style.line}`} />
+              </div>
+              <div className={`flex-1 rounded-xl border p-3 ${style.shell}`}>
+                <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                  <span className={`text-sm font-semibold ${style.label}`}>
+                    {entry.label}
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    {formatDate(entry.time)}
+                  </span>
+                </div>
+                <p className="text-sm text-slate-600">{entry.detail}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </SectionCard>
   );
 };
 
-// ─── Single Complaint Card ────────────────────────────────────────────────────
-const ComplaintCard = ({ complaint, onRefresh, compact }) => {
+const ComplaintCard = ({ complaint, onRefresh }) => {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [markingDone, setMarkingDone] = useState(false);
@@ -148,70 +248,70 @@ const ComplaintCard = ({ complaint, onRefresh, compact }) => {
     complaint.customerMarkedDone &&
     !complaint.closureBlocked;
   const isResolved = complaint.status === "resolved";
-  const pri = complaint.priority;
-  const borderColor =
-    pri === "urgent"
-      ? "border-l-red-500"
-      : pri === "high"
-        ? "border-l-orange-500"
-        : pri === "medium"
-          ? "border-l-yellow-500"
-          : "border-l-green-500";
+  const contactName = complaint.userId?.name || "Guest passenger";
+  const contactEmail = complaint.contactEmail || complaint.userId?.email || "-";
+  const contactPhone = complaint.contactMobile || complaint.userId?.phone || "-";
+  const style =
+    PRIORITY_CARD_STYLES[complaint.priority] || PRIORITY_CARD_STYLES.medium;
 
-  const handleSaveEdit = async (e) => {
-    e.stopPropagation();
+  const handleSaveEdit = async (event) => {
+    event.stopPropagation();
     setSavingEdit(true);
+
     try {
       await api.put(`/admin/complaints/${complaint._id}/status`, editData);
-      toast.success("Complaint updated");
+      toast.success("Complaint record updated.");
       setEditing(false);
       onRefresh();
-    } catch {
-      // api interceptor already shows the toast
     } finally {
       setSavingEdit(false);
     }
   };
 
-  const handleMarkDone = async (e) => {
-    e.stopPropagation();
+  const handleMarkDone = async (event) => {
+    event.stopPropagation();
+
     if (!actionNotes.trim()) {
-      toast.error("Please describe the action taken before confirming");
+      toast.error("Please add the action taken before saving.");
       return;
     }
+
     setSubmittingDone(true);
+
     try {
       await api.put(`/admin/complaints/${complaint._id}/mark-done`, {
         actionNotes,
       });
-      toast.success("Action confirmed! Awaiting customer confirmation.");
+      toast.success("Action taken has been recorded.");
       setMarkingDone(false);
       setActionNotes("");
       onRefresh();
-    } catch {
-      // api interceptor already shows the toast
     } finally {
       setSubmittingDone(false);
     }
   };
 
-  const handleClose = async (e) => {
-    e.stopPropagation();
-    const msg = complaint.closureBlocked
-      ? "Override: Force-close this complaint? Use only after re-addressing the customer concern."
-      : "Confirm closing this complaint?";
-    if (!window.confirm(msg)) return;
+  const handleClose = async (event) => {
+    event.stopPropagation();
+
+    const message = complaint.closureBlocked
+      ? "Force close this complaint after re-addressing the user concern?"
+      : "Close this complaint record?";
+
+    if (!window.confirm(message)) {
+      return;
+    }
+
     setClosing(true);
+
     try {
       await api.put(`/admin/complaints/${complaint._id}/status`, {
         status: "resolved",
         adminNotes:
           editData.adminNotes || complaint.adminNotes || "Closed by admin",
       });
-      toast.success("Complaint closed");
+      toast.success("Complaint closed.");
       onRefresh();
-    } catch {
-      // api interceptor already shows the toast
     } finally {
       setClosing(false);
     }
@@ -219,645 +319,586 @@ const ComplaintCard = ({ complaint, onRefresh, compact }) => {
 
   return (
     <div
-      className={`bg-white rounded-xl shadow-sm border border-gray-100 border-l-4 ${borderColor} overflow-hidden`}
+      className={`relative overflow-hidden rounded-[1.75rem] border bg-gradient-to-br shadow-lg ${style.shell} ${style.shadow}`}
     >
-      {/* Header: Only show email if compact, else show full header */}
-      <div
-        className="p-4 cursor-pointer select-none"
-        onClick={() => setExpanded(!expanded)}
+      <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${style.strip}`} />
+      <button
+        type="button"
+        onClick={() => setExpanded((current) => !current)}
+        className="flex w-full items-start justify-between gap-4 p-5 pt-6 text-left hover:bg-white/40"
       >
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            {compact ? (
-              <span className="font-semibold text-blue-700 text-base flex items-center gap-2">
-                <FaEnvelope className="text-blue-400 text-xs" />
-                {complaint.userId?.email ||
-                  complaint.contactEmail ||
-                  "(no email)"}
-              </span>
-            ) : (
-              <div>
-                <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <h4 className="font-bold text-railway-dark">
-                    {complaint.title}
-                  </h4>
-                  {complaint.closureBlocked && (
-                    <span className="flex items-center gap-1 text-xs bg-red-100 text-red-700 border border-red-300 rounded-full px-2 py-0.5 animate-pulse">
-                      <FaLock className="text-xs" /> Blocked
-                    </span>
-                  )}
-                  {complaint.authorityMarkedDone &&
-                    !isResolved &&
-                    !complaint.closureBlocked && (
-                      <span className="text-xs bg-blue-100 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5">
-                        ⚙ Action Taken
-                      </span>
-                    )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <span
-                    className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${STATUS_STYLES[complaint.status]}`}
-                  >
-                    {complaint.status.replace("_", " ").toUpperCase()}
-                  </span>
-                  <span
-                    className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${PRIORITY_STYLES[complaint.priority]}`}
-                  >
-                    {complaint.priority?.toUpperCase()}
-                  </span>
-                  <span className="text-xs bg-purple-100 text-purple-800 border border-purple-200 rounded-full px-2 py-0.5">
-                    {complaint.category?.replace(/_/g, " ")}
-                  </span>
-                  {complaint.pnrNumber && (
-                    <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5 font-mono">
-                      🎫 {complaint.pnrNumber}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
+        <div className="min-w-0 flex-1">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-white/80 px-2.5 py-1 font-mono text-[11px] text-slate-600 shadow-sm">
+              {complaint.complaintNumber || complaint._id}
+            </span>
+            <RecordPill value={complaint.status} />
+            <RecordPill value={complaint.priority} type="priority" />
+            <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">
+              {humanize(complaint.category)}
+            </span>
+            <span className="rounded-full border border-slate-200 bg-white/80 px-2.5 py-1 text-xs font-medium text-slate-600">
+              {TRACKING_LABELS[complaint.trackingStatus] || "Registered"}
+            </span>
           </div>
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <span className="hidden md:block text-xs text-gray-400">
+
+          <h3 className="text-lg font-semibold text-slate-900">
+            {complaint.title}
+          </h3>
+
+          <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-slate-600">
+            <span className="inline-flex items-center gap-1.5">
+              <FaUser className="text-xs text-railway-orange" />
+              {contactName}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <FaEnvelope className="text-xs text-blue-500" />
+              {contactEmail}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <FaPhone className="text-xs text-emerald-500" />
+              {contactPhone}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <FaClock className="text-xs text-slate-400" />
               {formatDate(complaint.createdAt)}
             </span>
-            {expanded ? (
-              <FaChevronUp className="text-gray-400" />
-            ) : (
-              <FaChevronDown className="text-gray-400" />
-            )}
           </div>
         </div>
-      </div>
 
-      {/* Expanded content */}
-      {expanded && (
-        <div className="border-t border-gray-100 p-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Left: description + user */}
-            <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
-                Description
-              </p>
-              <p className="text-sm text-gray-700 mb-3 leading-relaxed">
-                {complaint.description}
-              </p>
-              <div className="space-y-1.5 text-sm">
-                <p className="font-semibold text-gray-600">
-                  <FaUser className="inline mr-1 text-gray-400" />
-                  {complaint.userId?.name}
-                </p>
-                <p className="text-gray-500 flex items-center gap-1">
-                  <FaEnvelope className="text-blue-400 text-xs" />{" "}
-                  {complaint.userId?.email}
-                </p>
-                {complaint.contactMobile && (
-                  <p className="text-gray-500 flex items-center gap-1">
-                    <FaPhone className="text-green-500 text-xs" />{" "}
-                    {complaint.contactMobile}
-                  </p>
-                )}
-                {complaint.contactEmail && (
-                  <p className="text-gray-500 flex items-center gap-1">
-                    <FaEnvelope className="text-blue-500 text-xs" />{" "}
-                    {complaint.contactEmail}
-                  </p>
-                )}
+        <span className="rounded-full bg-white/80 p-2 text-slate-500 shadow-sm">
+          {expanded ? <FaChevronUp /> : <FaChevronDown />}
+        </span>
+      </button>
+
+      {expanded ? (
+        <div className="border-t border-white/80 bg-white/70 p-5 backdrop-blur-sm">
+          <div className="grid gap-4 lg:grid-cols-2">
+            <SectionCard title="Complaint Record" tone="blue">
+              <div className="divide-y divide-blue-100">
+                <InfoRow
+                  label="Complaint number"
+                  value={complaint.complaintNumber}
+                  mono={true}
+                />
+                <InfoRow
+                  label="Tracking ID"
+                  value={complaint.trackingUserId}
+                  mono={true}
+                />
+                <InfoRow label="PNR number" value={complaint.pnrNumber} />
+                <InfoRow label="Train number" value={complaint.trainNumber} />
+                <InfoRow
+                  label="Assigned department"
+                  value={humanize(complaint.assignedDepartment)}
+                />
+                <InfoRow
+                  label="Tracking stage"
+                  value={TRACKING_LABELS[complaint.trackingStatus]}
+                />
+                <InfoRow label="Created" value={formatDate(complaint.createdAt)} />
+                <InfoRow
+                  label="Resolved"
+                  value={formatDate(complaint.resolvedAt)}
+                />
               </div>
-            </div>
+            </SectionCard>
 
-            {/* Right: closure status */}
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 space-y-3">
-              <p className="text-xs font-semibold text-gray-500 uppercase">
-                Closure Status
-              </p>
-              <ClosureStatus c={complaint} />
-
-              {complaint.satisfactionRating != null && (
-                <div className="pt-2 border-t border-gray-200">
-                  <p className="text-xs font-semibold text-gray-500 uppercase mb-1">
-                    User Satisfaction
-                  </p>
-                  <StarDisplay rating={complaint.satisfactionRating} />
-                  {complaint.satisfactionComment && (
-                    <p className="text-xs text-gray-500 mt-1 italic">
-                      "{complaint.satisfactionComment}"
-                    </p>
-                  )}
-                  {complaint.closureBlocked && (
-                    <p className="text-xs text-red-600 mt-1 font-medium">
-                      ⚠ {complaint.closureBlockedReason}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {complaint.authorityActionNotes && (
-                <div className="pt-2 border-t border-gray-200">
-                  <p className="text-xs font-semibold text-gray-500 uppercase mb-1">
-                    Action Taken
-                  </p>
-                  <p className="text-xs text-gray-700">
-                    {complaint.authorityActionNotes}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {formatDate(complaint.authorityMarkedAt)}
-                  </p>
-                </div>
-              )}
-
-              {complaint.slaDeadline && (
-                <span
-                  className={`text-xs px-2 py-1 rounded-full border inline-block ${
-                    new Date(complaint.slaDeadline) < new Date()
-                      ? "bg-red-100 text-red-700 border-red-300"
-                      : "bg-green-100 text-green-700 border-green-200"
-                  }`}
-                >
-                  SLA:{" "}
-                  {new Date(complaint.slaDeadline) < new Date()
-                    ? "⚠ Overdue"
-                    : formatDate(complaint.slaDeadline)}
-                </span>
-              )}
-            </div>
+            <SectionCard title="Passenger Record" tone="amber">
+              <div className="divide-y divide-amber-100">
+                <InfoRow label="Passenger" value={contactName} />
+                <InfoRow label="Email" value={contactEmail} />
+                <InfoRow label="Mobile" value={contactPhone} />
+                <InfoRow
+                  label="Authority action"
+                  value={
+                    complaint.authorityMarkedDone ? "Recorded" : "Pending"
+                  }
+                />
+                <InfoRow
+                  label="Customer confirmation"
+                  value={
+                    complaint.customerMarkedDone ? "Recorded" : "Pending"
+                  }
+                />
+                <InfoRow
+                  label="Satisfaction"
+                  value={
+                    complaint.satisfactionRating
+                      ? `${complaint.satisfactionRating}/5`
+                      : "Not submitted"
+                  }
+                />
+              </div>
+            </SectionCard>
           </div>
 
-          {/* AI info */}
-          {complaint.aiSuggestions?.confidence > 0 && (
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3 border border-blue-100 flex flex-wrap gap-4 text-xs">
-              <span>
-                <FaRobot className="inline mr-1 text-railway-orange" />
-                <b>AI:</b> {complaint.aiSuggestions.suggestedCategory}
-              </span>
-              <span>
-                <b>Priority:</b> {complaint.aiSuggestions.suggestedPriority}
-              </span>
-              <span>
-                <b>Confidence:</b>{" "}
-                {(complaint.aiSuggestions.confidence * 100).toFixed(0)}%
-              </span>
-              <span>
-                <b>Sentiment:</b> {complaint.sentiment}
-              </span>
-              <span>
-                <b>Dept:</b> {complaint.assignedDepartment?.replace(/_/g, " ")}
-              </span>
-            </div>
-          )}
+          <div className="mt-4 grid gap-4 lg:grid-cols-[1.3fr,0.7fr]">
+            <SectionCard title="Complaint Details" tone="slate">
+              <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                {complaint.description || "No additional description provided."}
+              </p>
 
-          {/* Admin notes */}
-          {complaint.adminNotes && !editing && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
-              <span className="font-semibold text-yellow-800">
-                Admin Notes:{" "}
-              </span>
-              <span className="text-yellow-700">{complaint.adminNotes}</span>
-            </div>
-          )}
+              {complaint.authorityActionNotes ? (
+                <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                  <strong>Latest authority note:</strong>{" "}
+                  {complaint.authorityActionNotes}
+                </div>
+              ) : null}
 
-          {/* Action buttons */}
-          {!isResolved && !editing && !markingDone && (
-            <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+              {complaint.adminNotes && !editing ? (
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  <strong>Admin notes:</strong> {complaint.adminNotes}
+                </div>
+              ) : null}
+
+              {complaint.closureBlocked ? (
+                <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+                  <strong>Re-opened:</strong>{" "}
+                  {complaint.closureBlockedReason || "Low satisfaction rating."}
+                </div>
+              ) : null}
+            </SectionCard>
+
+            <SectionCard title="Current Status" tone="emerald">
+              <div className="space-y-3 text-sm text-slate-700">
+                <div>
+                  <p className="mb-1 text-slate-500">Complaint status</p>
+                  <RecordPill value={complaint.status} />
+                </div>
+                <div>
+                  <p className="mb-1 text-slate-500">Priority</p>
+                  <RecordPill value={complaint.priority} type="priority" />
+                </div>
+                <div>
+                  <p className="mb-1 text-slate-500">Closure</p>
+                  <p>
+                    {isResolved
+                      ? "Closed"
+                      : complaint.closureBlocked
+                        ? "Blocked and reopened"
+                        : canClose
+                          ? "Ready to close"
+                          : "Still in progress"}
+                  </p>
+                </div>
+              </div>
+            </SectionCard>
+          </div>
+
+          {!isResolved && !editing && !markingDone ? (
+            <div className="mt-4 flex flex-wrap gap-2">
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
                   setEditing(true);
                 }}
-                className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition"
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-railway-blue to-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-blue-100 hover:opacity-95"
               >
-                <FaEdit /> Edit Status / Notes
+                <FaEdit />
+                Edit record
               </button>
-              {!complaint.authorityMarkedDone && (
+
+              {!complaint.authorityMarkedDone ? (
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
                     setMarkingDone(true);
                   }}
-                  className="flex items-center gap-1 px-3 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition"
+                  className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100"
                 >
-                  <FaTools /> Mark Action Taken
+                  <FaTools />
+                  Record action taken
                 </button>
-              )}
-              {complaint.closureBlocked && (
+              ) : null}
+
+              {(canClose || complaint.closureBlocked) && (
                 <button
+                  type="button"
                   onClick={handleClose}
                   disabled={closing}
-                  className="flex items-center gap-1 px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition disabled:opacity-60"
+                  className="inline-flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-100 disabled:opacity-60"
                 >
-                  {closing ? (
-                    <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <FaRedo />
-                  )}
-                  Re-address &amp; Force Close
-                </button>
-              )}
-              {canClose && (
-                <button
-                  onClick={handleClose}
-                  disabled={closing}
-                  className="flex items-center gap-1 px-3 py-2 bg-green-700 text-white rounded-lg text-sm hover:bg-green-800 transition disabled:opacity-60"
-                >
-                  {closing ? (
-                    <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <FaUnlock />
-                  )}
-                  Close Complaint
+                  {complaint.closureBlocked ? <FaRedo /> : <FaCheckCircle />}
+                  {closing ? "Saving..." : complaint.closureBlocked ? "Force close" : "Close complaint"}
                 </button>
               )}
             </div>
-          )}
+          ) : null}
 
-          {/* Edit form */}
-          {editing && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
-              <p className="text-sm font-semibold text-blue-800">
-                Update Complaint
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {editing ? (
+            <div className="mt-4 rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-4">
+              <h4 className="mb-3 text-sm font-semibold text-blue-800">
+                Update Complaint Record
+              </h4>
+              <div className="grid gap-3 md:grid-cols-2">
                 <select
                   value={editData.status}
-                  onChange={(e) =>
-                    setEditData({ ...editData, status: e.target.value })
+                  onChange={(event) =>
+                    setEditData((current) => ({
+                      ...current,
+                      status: event.target.value,
+                    }))
                   }
-                  className="input-field text-sm py-2"
+                  className="input-field py-2 text-sm"
                 >
                   <option value="pending">Pending</option>
-                  <option value="in_progress">In Progress</option>
+                  <option value="in_progress">In progress</option>
                   <option value="rejected">Rejected</option>
                 </select>
+
                 <select
                   value={editData.assignedDepartment}
-                  onChange={(e) =>
-                    setEditData({
-                      ...editData,
-                      assignedDepartment: e.target.value,
-                    })
+                  onChange={(event) =>
+                    setEditData((current) => ({
+                      ...current,
+                      assignedDepartment: event.target.value,
+                    }))
                   }
-                  className="input-field text-sm py-2"
+                  className="input-field py-2 text-sm"
                 >
                   <option value="unassigned">Unassigned</option>
                   <option value="maintenance">Maintenance</option>
                   <option value="security">Security</option>
-                  <option value="customer_service">Customer Service</option>
+                  <option value="customer_service">Customer service</option>
                   <option value="catering">Catering</option>
                   <option value="operations">Operations</option>
                   <option value="technical">Technical</option>
                 </select>
               </div>
+
               <textarea
+                rows="3"
                 value={editData.adminNotes}
-                onChange={(e) =>
-                  setEditData({ ...editData, adminNotes: e.target.value })
+                onChange={(event) =>
+                  setEditData((current) => ({
+                    ...current,
+                    adminNotes: event.target.value,
+                  }))
                 }
-                className="input-field text-sm w-full"
-                rows="2"
-                placeholder="Admin notes (optional)..."
+                className="input-field mt-3 text-sm"
+                placeholder="Add or update admin notes"
               />
-              <div className="flex gap-2">
+
+              <div className="mt-3 flex flex-wrap gap-2">
                 <button
+                  type="button"
                   onClick={handleSaveEdit}
                   disabled={savingEdit}
-                  className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-60"
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-railway-blue to-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-blue-100 hover:opacity-95 disabled:opacity-60"
                 >
-                  {savingEdit ? (
-                    <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <FaSave />
-                  )}
-                  {savingEdit ? "Saving..." : "Save"}
+                  <FaSave />
+                  {savingEdit ? "Saving..." : "Save changes"}
                 </button>
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
                     setEditing(false);
                   }}
-                  className="flex items-center gap-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300"
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
-                  <FaTimes /> Cancel
+                  <FaTimes />
+                  Cancel
                 </button>
               </div>
             </div>
-          )}
+          ) : null}
 
-          {/* Mark done form */}
-          {markingDone && (
-            <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-3">
-              <p className="text-sm font-semibold text-green-800">
-                <FaTools className="inline mr-2" /> Describe the Action Taken
-              </p>
+          {markingDone ? (
+            <div className="mt-4 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-4">
+              <h4 className="mb-3 text-sm font-semibold text-emerald-800">
+                Record Action Taken
+              </h4>
               <textarea
-                value={actionNotes}
-                onChange={(e) => setActionNotes(e.target.value)}
-                className="input-field text-sm w-full"
                 rows="3"
-                autoFocus
-                placeholder="e.g. Cleaning crew dispatched to coach B4, staff counselled, ticket refund processed..."
+                value={actionNotes}
+                onChange={(event) => setActionNotes(event.target.value)}
+                className="input-field text-sm"
+                placeholder="Describe what the authority did for this complaint"
               />
-              <p className="text-xs text-green-700 bg-green-100 rounded-lg p-2">
-                ⚠ After this, the customer will be asked to confirm resolution
-                and rate satisfaction. The complaint <b>will not close</b>{" "}
-                unless the customer also confirms. If the customer gives a
-                rating below 3, the complaint will be{" "}
-                <b>automatically re-opened</b>.
-              </p>
-              <div className="flex gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 <button
+                  type="button"
                   onClick={handleMarkDone}
                   disabled={submittingDone}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-60 font-semibold"
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-100 hover:opacity-95 disabled:opacity-60"
                 >
-                  {submittingDone ? (
-                    <>
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />{" "}
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <FaCheckCircle /> Confirm Action Taken
-                    </>
-                  )}
+                  <FaCheckCircle />
+                  {submittingDone ? "Saving..." : "Save action"}
                 </button>
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
                     setMarkingDone(false);
                     setActionNotes("");
                   }}
-                  className="flex items-center gap-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300"
+                  className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
                 >
-                  <FaTimes /> Cancel
+                  <FaTimes />
+                  Cancel
                 </button>
               </div>
             </div>
-          )}
+          ) : null}
 
-          {/* Activity log */}
-          {complaint.automationLog?.length > 0 && (
-            <details>
-              <summary className="text-xs text-gray-400 cursor-pointer hover:text-gray-600">
-                Activity Log ({complaint.automationLog.length} entries)
-              </summary>
-              <div className="mt-2 space-y-1 max-h-40 overflow-y-auto pl-2">
-                {complaint.automationLog
-                  .slice()
-                  .reverse()
-                  .map((log, i) => (
-                    <div key={i} className="text-xs text-gray-500 flex gap-2">
-                      <span className="text-gray-300 shrink-0">
-                        {formatDate(log.performedAt)}
-                      </span>
-                      <span className="font-medium shrink-0">
-                        {log.action}:
-                      </span>
-                      <span>{log.details}</span>
-                    </div>
-                  ))}
-              </div>
-            </details>
-          )}
+          <div className="mt-4">
+            <ComplaintHistory complaint={complaint} />
+          </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };
 
-// ─── Main Panel ───────────────────────────────────────────────────────────────
-const ComplaintManagement = ({ onUpdate, initialFilter, compact }) => {
+const ComplaintManagement = ({ onUpdate, initialFilter }) => {
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState("all");
   const [filters, setFilters] = useState({
+    search: "",
+    category: initialFilter?.category || "",
     status: initialFilter?.status || "",
     priority: initialFilter?.priority || "",
-    search: "",
   });
 
   const fetchComplaints = useCallback(async () => {
+    setLoading(true);
+
     try {
       const params = new URLSearchParams();
-      if (activeCategory !== "all") params.append("category", activeCategory);
-      if (filters.status) params.append("status", filters.status);
-      if (filters.priority) params.append("priority", filters.priority);
-      const res = await api.get(`/admin/complaints?${params.toString()}`);
-      setComplaints(res.data.data);
-    } catch (err) {
-      console.error(err);
+      if (filters.category) {
+        params.append("category", filters.category);
+      }
+      if (filters.status) {
+        params.append("status", filters.status);
+      }
+      if (filters.priority) {
+        params.append("priority", filters.priority);
+      }
+
+      const query = params.toString();
+      const response = await api.get(
+        `/admin/complaints${query ? `?${query}` : ""}`,
+      );
+      setComplaints(response.data.data || []);
+    } catch (error) {
+      console.error("Failed to load complaints", error);
     } finally {
       setLoading(false);
     }
-  }, [activeCategory, filters.status, filters.priority]);
+  }, [filters.category, filters.priority, filters.status]);
 
   useEffect(() => {
     fetchComplaints();
   }, [fetchComplaints]);
 
-  // Apply filter when parent passes a new initialFilter (e.g. clicking a stat card)
   useEffect(() => {
-    if (initialFilter && Object.keys(initialFilter).length > 0) {
-      setFilters((f) => ({ ...f, ...initialFilter }));
-    }
+    setFilters((current) => ({
+      ...current,
+      category: initialFilter?.category || "",
+      status: initialFilter?.status || "",
+      priority: initialFilter?.priority || "",
+    }));
   }, [initialFilter]);
 
   const handleRefresh = () => {
     fetchComplaints();
-    if (onUpdate) onUpdate();
+    if (onUpdate) {
+      onUpdate();
+    }
   };
 
-  // Client-side text search
-  const filtered = complaints.filter((c) => {
-    if (!filters.search) return true;
-    const q = filters.search.toLowerCase();
-    return (
-      c.title?.toLowerCase().includes(q) ||
-      c.description?.toLowerCase().includes(q) ||
-      c.userId?.name?.toLowerCase().includes(q) ||
-      c.pnrNumber?.includes(q) ||
-      c.contactMobile?.includes(q)
-    );
+  const searchQuery = filters.search.trim().toLowerCase();
+  const filteredComplaints = complaints.filter((complaint) => {
+    if (!searchQuery) {
+      return true;
+    }
+
+    return [
+      complaint.title,
+      complaint.description,
+      complaint.userId?.name,
+      complaint.userId?.email,
+      complaint.contactEmail,
+      complaint.contactMobile,
+      complaint.pnrNumber,
+      complaint.complaintNumber,
+      complaint.trackingUserId,
+    ].some((value) => String(value || "").toLowerCase().includes(searchQuery));
   });
 
-  const categoryCounts = {};
-  complaints.forEach((c) => {
-    categoryCounts[c.category] = (categoryCounts[c.category] || 0) + 1;
-  });
-
-  const stats = {
-    total: filtered.length,
-    pending: filtered.filter((c) => c.status === "pending").length,
-    blocked: filtered.filter((c) => c.closureBlocked).length,
-    awaiting: filtered.filter(
-      (c) =>
-        c.authorityMarkedDone &&
-        !c.customerMarkedDone &&
-        c.status !== "resolved",
+  const summary = {
+    total: filteredComplaints.length,
+    pending: filteredComplaints.filter((item) => item.status === "pending")
+      .length,
+    inProgress: filteredComplaints.filter(
+      (item) => item.status === "in_progress",
     ).length,
-    resolved: filtered.filter((c) => c.status === "resolved").length,
+    blocked: filteredComplaints.filter((item) => item.closureBlocked).length,
+    resolved: filteredComplaints.filter((item) => item.status === "resolved")
+      .length,
   };
-
-  const blocked = filtered.filter((c) => c.closureBlocked);
-  const awaiting = filtered.filter(
-    (c) =>
-      c.authorityMarkedDone &&
-      !c.customerMarkedDone &&
-      !c.closureBlocked &&
-      c.status !== "resolved",
-  );
-  const rest = filtered.filter(
-    (c) =>
-      !c.closureBlocked &&
-      !(
-        c.authorityMarkedDone &&
-        !c.customerMarkedDone &&
-        c.status !== "resolved"
-      ),
-  );
 
   return (
     <div className="space-y-5">
-      {/* Category tabs */}
-      {/* Category tabs */}
-      <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-10 gap-2">
-        {CATEGORIES.map((cat) => {
-          const Icon = cat.icon;
-          const count =
-            cat.key === "all"
-              ? complaints.length
-              : categoryCounts[cat.key] || 0;
-          const active = activeCategory === cat.key;
-          return (
-            <button
-              key={cat.key}
-              onClick={() => setActiveCategory(cat.key)}
-              className={`flex flex-col items-center justify-center gap-2 px-2 py-4 rounded-xl border-2 font-bold transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 ${
-                active
-                  ? "bg-railway-blue text-white border-railway-blue shadow-lg scale-105"
-                  : "bg-white text-gray-700 border-gray-200 hover:border-railway-blue hover:text-railway-blue"
-              }`}
+      <div className="rounded-[1.8rem] border border-white/70 bg-white/85 p-5 shadow-lg shadow-slate-100 backdrop-blur-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-slate-900">
+              Complaint records
+            </p>
+            <p className="text-sm text-slate-500">
+              Search, update, and review the full record for each complaint.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className="rounded-xl bg-gradient-to-r from-railway-blue to-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-blue-100 hover:opacity-95"
+          >
+            Refresh records
+          </button>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <div className="relative xl:col-span-2">
+            <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={filters.search}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  search: event.target.value,
+                }))
+              }
+              placeholder="Search complaint number, title, passenger, PNR, mobile"
+              className="input-field pl-10 text-sm"
+            />
+          </div>
+
+          <select
+            value={filters.category}
+            onChange={(event) =>
+              setFilters((current) => ({
+                ...current,
+                category: event.target.value,
+              }))
+            }
+            className="input-field py-2 text-sm"
+          >
+            {CATEGORY_OPTIONS.map((option) => (
+              <option key={option.value || "all"} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filters.status}
+            onChange={(event) =>
+              setFilters((current) => ({
+                ...current,
+                status: event.target.value,
+              }))
+            }
+            className="input-field py-2 text-sm"
+          >
+            {STATUS_OPTIONS.map((option) => (
+              <option key={option.value || "all"} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filters.priority}
+            onChange={(event) =>
+              setFilters((current) => ({
+                ...current,
+                priority: event.target.value,
+              }))
+            }
+            className="input-field py-2 text-sm"
+          >
+            {PRIORITY_OPTIONS.map((option) => (
+              <option key={option.value || "all"} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          {[
+            {
+              label: "Total",
+              value: summary.total,
+              shell: "from-blue-50 to-white border-blue-200",
+              accent: "text-blue-700",
+            },
+            {
+              label: "Pending",
+              value: summary.pending,
+              shell: "from-amber-50 to-white border-amber-200",
+              accent: "text-amber-700",
+            },
+            {
+              label: "In progress",
+              value: summary.inProgress,
+              shell: "from-sky-50 to-white border-sky-200",
+              accent: "text-sky-700",
+            },
+            {
+              label: "Blocked",
+              value: summary.blocked,
+              shell: "from-rose-50 to-white border-rose-200",
+              accent: "text-rose-700",
+            },
+            {
+              label: "Resolved",
+              value: summary.resolved,
+              shell: "from-emerald-50 to-white border-emerald-200",
+              accent: "text-emerald-700",
+            },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className={`rounded-2xl border bg-gradient-to-br px-4 py-3 shadow-sm ${item.shell}`}
             >
-              <Icon
-                className={`text-2xl ${active ? "text-white" : "text-railway-blue"}`}
-              />
-              <span className="text-xs font-extrabold text-center leading-tight">
-                {cat.label}
-              </span>
-              <span
-                className={`text-sm font-black px-2 py-0.5 rounded-full min-w-[28px] text-center ${
-                  active
-                    ? "bg-white text-railway-blue"
-                    : "bg-blue-50 text-railway-blue"
-                }`}
-              >
-                {count}
-              </span>
-            </button>
-          );
-        })}
+              <p className="text-xs uppercase tracking-wide text-slate-400">
+                {item.label}
+              </p>
+              <p className={`mt-1 text-2xl font-semibold ${item.accent}`}>
+                {item.value}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Filter bar */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-wrap gap-3 items-center">
-        <input
-          type="text"
-          placeholder="🔍  Search title, user, PNR, mobile..."
-          value={filters.search}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, search: e.target.value }))
-          }
-          className="input-field flex-1 min-w-0 w-full sm:min-w-48 text-sm py-2"
-        />
-        <select
-          value={filters.status}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, status: e.target.value }))
-          }
-          className="input-field text-sm py-2"
-        >
-          <option value="">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="in_progress">In Progress</option>
-          <option value="resolved">Resolved</option>
-          <option value="rejected">Rejected</option>
-        </select>
-        <select
-          value={filters.priority}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, priority: e.target.value }))
-          }
-          className="input-field text-sm py-2"
-        >
-          <option value="">All Priority</option>
-          <option value="urgent">Urgent</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
-        </select>
-        <button
-          onClick={handleRefresh}
-          className="px-4 py-2 bg-railway-blue text-white rounded-lg text-sm hover:opacity-90"
-        >
-          Refresh
-        </button>
-      </div>
-
-      {/* Cards */}
       {loading ? (
         <div className="flex justify-center py-16">
           <div className="spinner" />
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
-          <FaFilter className="text-4xl mx-auto mb-2" />
-          <p>No complaints match the current filters</p>
+      ) : filteredComplaints.length === 0 ? (
+        <div className="rounded-[1.8rem] border border-dashed border-slate-300 bg-white py-16 text-center text-slate-500">
+          <FaFilter className="mx-auto mb-3 text-3xl text-slate-300" />
+          <p>No complaints match the current filters.</p>
         </div>
       ) : (
         <div className="space-y-4">
-          {blocked.length > 0 && (
-            <div>
-              <p className="text-xs font-bold text-red-600 uppercase mb-2 flex items-center gap-1">
-                <FaLock /> Blocked — Needs Re-attention ({blocked.length})
-              </p>
-              <div className="space-y-3">
-                {blocked.map((c) => (
-                  <ComplaintCard
-                    key={c._id}
-                    complaint={c}
-                    onRefresh={handleRefresh}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-          {awaiting.length > 0 && (
-            <div>
-              <p className="text-xs font-bold text-indigo-600 uppercase mb-2 flex items-center gap-1">
-                <FaUser /> Awaiting Customer Confirmation ({awaiting.length})
-              </p>
-              <div className="space-y-3">
-                {awaiting.map((c) => (
-                  <ComplaintCard
-                    key={c._id}
-                    complaint={c}
-                    onRefresh={handleRefresh}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-          {rest.length > 0 && (
-            <div className="space-y-3">
-              {rest.map((c) => (
-                <ComplaintCard
-                  key={c._id}
-                  complaint={c}
-                  onRefresh={handleRefresh}
-                  compact={compact}
-                />
-              ))}
-            </div>
-          )}
+          {filteredComplaints.map((complaint) => (
+            <ComplaintCard
+              key={complaint._id}
+              complaint={complaint}
+              onRefresh={handleRefresh}
+            />
+          ))}
         </div>
       )}
     </div>
