@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const { Resend } = require("resend");
 const User = require("../models/User");
+const Complaint = require("../models/Complaint");
 const OtpModel = require("../models/Otp");
 
 // ─── Resend email helper ──────────────────────────────────────────────────────
@@ -71,8 +72,7 @@ const calculateAge = (dateOfBirth) => {
   let age = today.getFullYear() - dob.getFullYear();
   const hasBirthdayPassed =
     today.getMonth() > dob.getMonth() ||
-    (today.getMonth() === dob.getMonth() &&
-      today.getDate() >= dob.getDate());
+    (today.getMonth() === dob.getMonth() && today.getDate() >= dob.getDate());
 
   if (!hasBirthdayPassed) {
     age -= 1;
@@ -92,9 +92,9 @@ const buildProfileCompletion = (user) => {
     ),
     completedFields: completedFields.length,
     totalFields: PROFILE_COMPLETION_FIELDS.length,
-    missingFields: PROFILE_COMPLETION_FIELDS
-      .filter(({ key }) => !isFilledProfileValue(user[key]))
-      .map(({ label }) => label),
+    missingFields: PROFILE_COMPLETION_FIELDS.filter(
+      ({ key }) => !isFilledProfileValue(user[key]),
+    ).map(({ label }) => label),
   };
 };
 
@@ -140,6 +140,31 @@ const normalizeProfileValue = (value) => {
 
   const trimmed = value.trim();
   return trimmed || undefined;
+};
+
+const TRACKING_ID_PATTERN = /^TRK-[A-Z0-9]{8}$/;
+
+const createTrackingProfile = async ({ complaint }) => {
+  const fallbackName = complaint.contactEmail
+    ? complaint.contactEmail.split("@")[0]
+    : `RailMadad-${complaint.trackingUserId.slice(-4)}`;
+
+  // Tracking IDs are globally unique, so this generated email is safe.
+  const trackingEmail = `${complaint.trackingUserId.toLowerCase()}@tracker.railmadad.local`;
+  const randomPassword = crypto.randomBytes(24).toString("hex");
+  const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+  const profile = await User.create({
+    name: fallbackName.slice(0, 50),
+    email: trackingEmail,
+    password: hashedPassword,
+    isOtpUser: true,
+  });
+
+  complaint.userId = profile._id;
+  await complaint.save();
+
+  return profile;
 };
 
 // @desc    Register new user
@@ -200,40 +225,86 @@ exports.register = async (req, res, next) => {
 exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
+    const identifier = String(email || "").trim();
 
     // Validate identifier & password
-    if (!email || !password) {
+    if (!identifier || !password) {
       return res.status(400).json({
         success: false,
-        message: "Please provide email/mobile and password",
+        message: "Please provide email/mobile/tracking ID and password",
       });
     }
 
-    // Determine if input is mobile number or email
-    const isMobile = /^\d{10}$/.test(email.trim());
+    // Determine identifier type (mobile, tracking ID, or email)
+    const normalizedIdentifier = identifier.toUpperCase();
+    const isMobile = /^\d{10}$/.test(identifier);
+    const isTrackingId = TRACKING_ID_PATTERN.test(normalizedIdentifier);
 
-    // Check for user by email OR phone
-    const user = await User.findOne(
-      isMobile
-        ? { phone: email.trim() }
-        : { email: email.trim().toLowerCase() },
-    ).select("+password");
+    let user = null;
 
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid credentials",
-      });
-    }
+    if (isTrackingId) {
+      const complaint = await Complaint.findOne({
+        trackingUserId: normalizedIdentifier,
+      }).select(
+        "+trackingPasswordHash userId contactEmail contactMobile trackingUserId",
+      );
 
-    // Check if password matches
-    const isMatch = await bcrypt.compare(password, user.password);
+      if (!complaint) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid credentials",
+        });
+      }
 
-    if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid credentials",
-      });
+      const trackerPasswordMatch = await bcrypt.compare(
+        password,
+        complaint.trackingPasswordHash,
+      );
+
+      if (!trackerPasswordMatch) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid credentials",
+        });
+      }
+
+      if (complaint.userId) {
+        user = await User.findById(complaint.userId);
+
+        if (user && !user.isOtpUser) {
+          return res.status(403).json({
+            success: false,
+            message:
+              "This tracking ID is linked to a registered account. Please login using email/mobile password.",
+          });
+        }
+      }
+
+      if (!user) {
+        user = await createTrackingProfile({ complaint });
+      }
+    } else {
+      // Check for user by email OR phone
+      user = await User.findOne(
+        isMobile ? { phone: identifier } : { email: identifier.toLowerCase() },
+      ).select("+password");
+
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid credentials",
+        });
+      }
+
+      // Check if password matches
+      const isMatch = await bcrypt.compare(password, user.password);
+
+      if (!isMatch) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid credentials",
+        });
+      }
     }
 
     // Check if user is active

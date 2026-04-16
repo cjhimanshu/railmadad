@@ -28,13 +28,14 @@ const loginValidation = [
   body("email")
     .trim()
     .notEmpty()
-    .withMessage("Please provide your email or mobile number")
+    .withMessage("Please provide your email, mobile number, or tracking ID")
     .custom((value) => {
       const isMobile = /^\d{10}$/.test(value);
       const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-      if (!isMobile && !isEmail) {
+      const isTrackingId = /^TRK-[A-Z0-9]{8}$/i.test(value);
+      if (!isMobile && !isEmail && !isTrackingId) {
         throw new Error(
-          "Please provide a valid email or 10-digit mobile number",
+          "Please provide a valid email, 10-digit mobile number, or tracking ID",
         );
       }
       return true;
@@ -66,13 +67,7 @@ const profileValidation = [
     .withMessage("Phone number must be exactly 10 digits"),
   body("gender")
     .optional({ checkFalsy: true })
-    .isIn([
-      "male",
-      "female",
-      "transgender",
-      "non_binary",
-      "prefer_not_to_say",
-    ])
+    .isIn(["male", "female", "transgender", "non_binary", "prefer_not_to_say"])
     .withMessage("Please select a valid gender"),
   body("dateOfBirth")
     .optional({ checkFalsy: true })

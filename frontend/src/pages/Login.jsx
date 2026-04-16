@@ -117,7 +117,10 @@ const Login = () => {
           </h2>
           <p className="text-sm text-gray-500 mb-5">
             If you received a tracking ID and password by SMS or email, use{" "}
-            <Link to="/track" className="text-railway-blue font-semibold hover:underline">
+            <Link
+              to="/track"
+              className="text-railway-blue font-semibold hover:underline"
+            >
               Track Complaint
             </Link>{" "}
             instead of this login form.
@@ -126,19 +129,19 @@ const Login = () => {
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Email
+                Email / Mobile / Tracking ID
               </label>
               <div className="relative">
                 <FaEnvelope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
-                  type="email"
+                  type="text"
                   name="email"
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
                   className="input-field pl-10"
-                  placeholder="your@email.com"
+                  placeholder="you@email.com / 9876543210 / TRK-AB12CD34"
                   autoComplete="username"
                   required
                 />
