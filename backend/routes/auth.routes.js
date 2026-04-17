@@ -5,6 +5,8 @@ const {
   login,
   adminLogin,
   adminRegister,
+  sendOtp,
+  verifyOtp,
   getMe,
   updateProfile,
   forgotPassword,
@@ -40,6 +42,11 @@ const loginValidation = [
       }
       return true;
     }),
+  body("password").notEmpty().withMessage("Password is required"),
+];
+
+const adminLoginValidation = [
+  body("email").isEmail().withMessage("Please provide a valid email"),
   body("password").notEmpty().withMessage("Password is required"),
 ];
 
@@ -120,19 +127,53 @@ const profileValidation = [
     .withMessage("PIN code must be exactly 6 digits"),
 ];
 
+const forgotPasswordValidation = [
+  body("email").isEmail().withMessage("Please provide a valid email"),
+];
+
+const resetPasswordValidation = [
+  body("password")
+    .isLength({ min: 6 })
+    .withMessage("Password must be at least 6 characters"),
+];
+
+const sendOtpValidation = [
+  body("email").isEmail().withMessage("Please provide a valid email"),
+];
+
+const verifyOtpValidation = [
+  body("email").isEmail().withMessage("Please provide a valid email"),
+  body("otp")
+    .trim()
+    .matches(/^\d{6}$/)
+    .withMessage("OTP must be a 6-digit code"),
+];
+
 // Routes
 router.post("/register", registerValidation, validate, register);
 router.post("/login", loginValidation, validate, login);
-router.post("/admin-login", loginValidation, validate, adminLogin);
+router.post("/admin-login", adminLoginValidation, validate, adminLogin);
 router.post(
   "/admin-register",
   adminRegisterValidation,
   validate,
   adminRegister,
 );
+router.post("/send-otp", sendOtpValidation, validate, sendOtp);
+router.post("/verify-otp", verifyOtpValidation, validate, verifyOtp);
 router.get("/me", protect, getMe);
 router.put("/me", protect, profileValidation, validate, updateProfile);
-router.post("/forgot-password", forgotPassword);
-router.put("/reset-password/:token", resetPassword);
+router.post(
+  "/forgot-password",
+  forgotPasswordValidation,
+  validate,
+  forgotPassword,
+);
+router.put(
+  "/reset-password/:token",
+  resetPasswordValidation,
+  validate,
+  resetPassword,
+);
 
 module.exports = router;

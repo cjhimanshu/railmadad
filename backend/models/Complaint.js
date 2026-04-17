@@ -219,8 +219,6 @@ const complaintSchema = new mongoose.Schema(
 // ── Indexes ────────────────────────────────────────────────────────────────────
 // Single-field
 complaintSchema.index({ userId: 1, createdAt: -1 });
-complaintSchema.index({ complaintNumber: 1 }, { unique: true, sparse: true });
-complaintSchema.index({ trackingUserId: 1 }, { unique: true, sparse: true });
 complaintSchema.index({ pnrNumber: 1 });
 complaintSchema.index({ contactEmail: 1 });
 complaintSchema.index({ contactMobile: 1 });
@@ -234,6 +232,5 @@ complaintSchema.index({ slaDeadline: 1, status: 1, escalatedAt: 1 }); // SLA esc
 complaintSchema.index({ category: 1, status: 1 }); // category analytics
 complaintSchema.index({ trackingStatus: 1, createdAt: -1 }); // public tracking queries
 complaintSchema.index({ dispatchedToControlUnit: 1, status: 1 }); // control unit dispatch queries
-complaintSchema.index({ trackingStatus: 1, createdAt: -1 }); // public tracking
 
 module.exports = mongoose.model("Complaint", complaintSchema);
