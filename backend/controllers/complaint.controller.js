@@ -10,6 +10,55 @@ const {
   verifyComplaintTracker,
 } = require("../services/complaintTracking.service");
 
+const normalizeContactEmail = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase();
+
+const normalizeContactMobile = (value) => String(value || "").trim();
+
+const getComplaintOwnerUserId = (complaint) => {
+  if (!complaint || !complaint.userId) {
+    return null;
+  }
+
+  if (typeof complaint.userId === "object" && complaint.userId._id) {
+    return complaint.userId._id.toString();
+  }
+
+  return complaint.userId.toString();
+};
+
+const canUserAccessComplaint = (complaint, user) => {
+  if (!complaint || !user) {
+    return false;
+  }
+
+  if (user.role === "admin") {
+    return true;
+  }
+
+  const complaintOwnerUserId = getComplaintOwnerUserId(complaint);
+  const userOwnsComplaintById =
+    complaintOwnerUserId && complaintOwnerUserId === user.id;
+
+  const userMatchesContactEmail =
+    normalizeContactEmail(user.email) &&
+    normalizeContactEmail(complaint.contactEmail) ===
+      normalizeContactEmail(user.email);
+
+  const userMatchesContactMobile =
+    normalizeContactMobile(user.phone) &&
+    normalizeContactMobile(complaint.contactMobile) ===
+      normalizeContactMobile(user.phone);
+
+  return Boolean(
+    userOwnsComplaintById ||
+    userMatchesContactEmail ||
+    userMatchesContactMobile,
+  );
+};
+
 // @desc    Create new complaint
 // @route   POST /api/complaints
 // @access  Public
@@ -149,7 +198,10 @@ exports.trackComplaintWithCredentials = async (req, res, next) => {
       });
     }
 
-    const complaint = await verifyComplaintTracker({ trackingUserId, password });
+    const complaint = await verifyComplaintTracker({
+      trackingUserId,
+      password,
+    });
 
     if (!complaint) {
       return res.status(400).json({
@@ -205,10 +257,7 @@ exports.getComplaint = async (req, res, next) => {
       });
     }
 
-    if (
-      (!complaint.userId || complaint.userId._id.toString() !== req.user.id) &&
-      req.user.role !== "admin"
-    ) {
+    if (!canUserAccessComplaint(complaint, req.user)) {
       return res.status(403).json({
         success: false,
         message: "Not authorized to access this complaint",
@@ -238,7 +287,7 @@ exports.updateComplaint = async (req, res, next) => {
       });
     }
 
-    if (!complaint.userId || complaint.userId.toString() !== req.user.id) {
+    if (!canUserAccessComplaint(complaint, req.user)) {
       return res.status(403).json({
         success: false,
         message: "Not authorized to update this complaint",
@@ -287,7 +336,7 @@ exports.deleteComplaint = async (req, res, next) => {
       });
     }
 
-    if (!complaint.userId || complaint.userId.toString() !== req.user.id) {
+    if (!canUserAccessComplaint(complaint, req.user)) {
       return res.status(403).json({
         success: false,
         message: "Not authorized to delete this complaint",
@@ -333,7 +382,7 @@ exports.submitSatisfaction = async (req, res, next) => {
         .json({ success: false, message: "Complaint not found" });
     }
 
-    if (!complaint.userId || complaint.userId.toString() !== req.user.id) {
+    if (!canUserAccessComplaint(complaint, req.user)) {
       return res
         .status(403)
         .json({ success: false, message: "Not authorized" });
@@ -389,7 +438,7 @@ exports.customerConfirmResolved = async (req, res, next) => {
         .json({ success: false, message: "Complaint not found" });
     }
 
-    if (!complaint.userId || complaint.userId.toString() !== req.user.id) {
+    if (!canUserAccessComplaint(complaint, req.user)) {
       return res
         .status(403)
         .json({ success: false, message: "Not authorized" });
@@ -450,7 +499,10 @@ exports.customerConfirmResolved = async (req, res, next) => {
           previousStatus,
         });
       } catch (notificationError) {
-        console.error("Resolution notification error:", notificationError.message);
+        console.error(
+          "Resolution notification error:",
+          notificationError.message,
+        );
       }
     });
 
@@ -479,18 +531,7 @@ exports.closeComplaint = async (req, res, next) => {
         .json({ success: false, message: "Complaint not found" });
     }
 
-    const userOwns =
-      complaint.userId && complaint.userId.toString() === req.user.id;
-    const userMatchesContact =
-      (req.user.email &&
-        complaint.contactEmail &&
-        complaint.contactEmail.toLowerCase() ===
-          req.user.email.toLowerCase()) ||
-      (req.user.phone &&
-        complaint.contactMobile &&
-        complaint.contactMobile === req.user.phone.trim());
-
-    if (!userOwns && !userMatchesContact) {
+    if (!canUserAccessComplaint(complaint, req.user)) {
       return res
         .status(403)
         .json({ success: false, message: "Not authorized" });
@@ -538,7 +579,10 @@ exports.closeComplaint = async (req, res, next) => {
           previousStatus,
         });
       } catch (notificationError) {
-        console.error("Resolution notification error:", notificationError.message);
+        console.error(
+          "Resolution notification error:",
+          notificationError.message,
+        );
       }
     });
 
