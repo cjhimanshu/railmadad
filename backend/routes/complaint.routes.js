@@ -1,5 +1,6 @@
 const express = require("express");
 const { body } = require("express-validator");
+const rateLimit = require("express-rate-limit");
 const {
   createComplaint,
   getUserComplaints,
@@ -32,6 +33,30 @@ const complaintValidation = [
     .withMessage("Description cannot exceed 2000 characters"),
 ];
 
+const trackCredentialsValidation = [
+  body("trackingUserId")
+    .trim()
+    .matches(/^TRK-[A-Z0-9]{8}$/i)
+    .withMessage("Tracking ID must be in TRK-XXXXXXXX format"),
+  body("password")
+    .notEmpty()
+    .withMessage("Password is required")
+    .isLength({ min: 8 })
+    .withMessage("Password must be at least 8 characters"),
+];
+
+const trackLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 12,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message:
+      "Too many complaint tracking attempts. Please try again after 15 minutes.",
+  },
+});
+
 router.post(
   "/",
   optionalProtect,
@@ -41,7 +66,13 @@ router.post(
   createComplaint,
 );
 
-router.post("/track", trackComplaintWithCredentials);
+router.post(
+  "/track",
+  trackLimiter,
+  trackCredentialsValidation,
+  validate,
+  trackComplaintWithCredentials,
+);
 router.get("/track", protect, trackComplaintByContact);
 
 router.use(protect);
