@@ -12,6 +12,7 @@ const authRoutes = require("../routes/auth.routes");
 
 function createTestApp() {
   const app = express();
+  app.set("trust proxy", 1);
   app.use(express.json());
   app.use("/api/auth", authRoutes);
   return app;
@@ -93,4 +94,60 @@ test("PUT /api/auth/reset-password/:token validates password length", async () =
   assert.equal(res.status, 400);
   assert.equal(res.body.success, false);
   assert.match(res.body.message, /at least 6 characters/i);
+});
+
+test("POST /api/auth/login applies brute-force rate limit", async () => {
+  const app = createTestApp();
+  const ip = "198.51.100.10";
+
+  for (let attempt = 1; attempt <= 10; attempt += 1) {
+    const res = await request(app)
+      .post("/api/auth/login")
+      .set("X-Forwarded-For", ip)
+      .send({
+        email: "not-valid-id",
+        password: "password123",
+      });
+
+    assert.equal(res.status, 400);
+  }
+
+  const limited = await request(app)
+    .post("/api/auth/login")
+    .set("X-Forwarded-For", ip)
+    .send({
+      email: "not-valid-id",
+      password: "password123",
+    });
+
+  assert.equal(limited.status, 429);
+  assert.equal(limited.body.success, false);
+  assert.match(limited.body.message, /too many authentication attempts/i);
+});
+
+test("POST /api/auth/send-otp applies request rate limit", async () => {
+  const app = createTestApp();
+  const ip = "198.51.100.11";
+
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    const res = await request(app)
+      .post("/api/auth/send-otp")
+      .set("X-Forwarded-For", ip)
+      .send({
+        email: "bad-email",
+      });
+
+    assert.equal(res.status, 400);
+  }
+
+  const limited = await request(app)
+    .post("/api/auth/send-otp")
+    .set("X-Forwarded-For", ip)
+    .send({
+      email: "bad-email",
+    });
+
+  assert.equal(limited.status, 429);
+  assert.equal(limited.body.success, false);
+  assert.match(limited.body.message, /too many otp requests/i);
 });

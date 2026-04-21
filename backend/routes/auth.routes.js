@@ -1,5 +1,6 @@
 const express = require("express");
 const { body } = require("express-validator");
+const rateLimit = require("express-rate-limit");
 const {
   register,
   login,
@@ -16,6 +17,41 @@ const { protect } = require("../middleware/auth.middleware");
 const validate = require("../middleware/validation.middleware");
 
 const router = express.Router();
+
+const authAttemptLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message:
+      "Too many authentication attempts. Please try again after 15 minutes.",
+  },
+});
+
+const otpRequestLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many OTP requests. Please try again after 15 minutes.",
+  },
+});
+
+const otpVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message:
+      "Too many OTP verification attempts. Please try again after 15 minutes.",
+  },
+});
 
 // Validation rules
 const registerValidation = [
@@ -151,20 +187,39 @@ const verifyOtpValidation = [
 
 // Routes
 router.post("/register", registerValidation, validate, register);
-router.post("/login", loginValidation, validate, login);
-router.post("/admin-login", adminLoginValidation, validate, adminLogin);
+router.post("/login", authAttemptLimiter, loginValidation, validate, login);
+router.post(
+  "/admin-login",
+  authAttemptLimiter,
+  adminLoginValidation,
+  validate,
+  adminLogin,
+);
 router.post(
   "/admin-register",
   adminRegisterValidation,
   validate,
   adminRegister,
 );
-router.post("/send-otp", sendOtpValidation, validate, sendOtp);
-router.post("/verify-otp", verifyOtpValidation, validate, verifyOtp);
+router.post(
+  "/send-otp",
+  otpRequestLimiter,
+  sendOtpValidation,
+  validate,
+  sendOtp,
+);
+router.post(
+  "/verify-otp",
+  otpVerifyLimiter,
+  verifyOtpValidation,
+  validate,
+  verifyOtp,
+);
 router.get("/me", protect, getMe);
 router.put("/me", protect, profileValidation, validate, updateProfile);
 router.post(
   "/forgot-password",
+  otpRequestLimiter,
   forgotPasswordValidation,
   validate,
   forgotPassword,
