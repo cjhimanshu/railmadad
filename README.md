@@ -1,198 +1,266 @@
-# RailMadad — Railway Complaint Management, Made Simple
+# RailMadad
 
-Welcome to RailMadad! This project is all about making it easier for railway passengers to submit complaints and for admins to manage and resolve them efficiently. We use a modern MERN stack (MongoDB, Express, React, Node.js) and sprinkle in some AI to help categorize and prioritize complaints.
+AI-assisted railway complaint management platform built with the MERN stack.
 
-**Live Demo:**  
-[railmadad-gamma.vercel.app](https://railmadad-gamma.vercel.app)
+RailMadad helps passengers submit and track complaints, while giving admins tools to triage, dispatch, and resolve issues faster.
 
----
+Live app: https://railmadad-gamma.vercel.app
 
-## What Can You Do Here?
+## Key Features
 
-### For Passengers
+### Passenger Experience
 
-- **No account? No problem!** You can submit a complaint with just your email.
-- After you submit, you’ll get a password setup link in your inbox. Set your password, log in, and you’ll see all your complaints in one place.
-- Track the progress of your complaint from start to finish.
+- Submit complaints with or without a full account flow.
+- Receive complaint tracking credentials for public tracking.
+- Track updates and closure status.
+- Submit satisfaction feedback after resolution.
 
-### For Registered Users
+### Admin Experience
 
-- Log in with your email and password.
-- See your full complaint history and real-time updates.
+- Admin-only dashboard with protected routes.
+- Filter and manage complaints by status, priority, and dispatch flow.
+- Mark authority action complete and handle customer confirmation.
+- Review analytics and dispatch logs.
 
-### For Admins
+### AI and Automation
 
-- Special admin login at `/admin-login`.
-- View, filter, and manage all complaints.
-- Assign departments, update statuses, and add internal notes.
-- See analytics and trends with interactive charts.
+- AI-assisted complaint categorization, priority suggestion, sentiment, and draft response support.
+- BullMQ + Redis queue for background AI processing.
+- Automatic fallback to in-process async handling when Redis is unavailable.
+- Cron-driven automation for escalation, status transitions, and operational logging.
 
-### How Does AI Help?
+## Tech Stack
 
-- Automatically categorizes complaints (using Hugging Face models).
-- Suggests priority and even drafts a response for admins.
-- Analyzes sentiment to help spot urgent or negative feedback.
+### Backend
 
----
+- Node.js, Express
+- MongoDB, Mongoose
+- JWT, bcryptjs
+- BullMQ, ioredis
+- Cloudinary, Multer
+- Resend (email), Twilio (SMS)
+- express-rate-limit, express-validator, node-cron
 
-## Tech Stack (What’s Under the Hood?)
+### Frontend
 
-**Backend:**
+- React 18, Vite
+- React Router
+- Tailwind CSS
+- Axios
+- Recharts
+- React Toastify
 
-- Node.js + Express (API server)
-- MongoDB + Mongoose (database)
-- JWT + bcryptjs (authentication)
-- Cloudinary (image uploads)
-- Hugging Face API (AI magic)
-- Resend (emails)
-- BullMQ + Redis (background jobs)
-- Multer (file uploads)
-- express-rate-limit (security)
-- node-cron (scheduled tasks)
+## Project Structure
 
-**Frontend:**
+```text
+railmadad/
+  backend/
+    config/
+    controllers/
+    middleware/
+    models/
+    queues/
+    routes/
+    services/
+    tests/
+    server.js
+  frontend/
+    public/
+    src/
+  README.md
+```
 
-- React 18 + Vite (UI and build tool)
-- Tailwind CSS (styling)
-- React Router v6 (navigation)
-- Recharts (charts)
-- Axios (API calls)
-- React Toastify (notifications)
+## Prerequisites
 
----
+- Node.js 18+
+- npm 9+
+- MongoDB Atlas (or local MongoDB)
+- Cloudinary account (for image upload)
+- Hugging Face API token
+- Resend account (for email delivery)
+- Optional: Redis (recommended for production queueing)
+- Optional: Twilio credentials (for SMS notifications)
 
-## Getting Started (Local Setup)
+## Quick Start
 
-1. **Clone this repo:**
-   `bash
-git clone https://github.com/yourusername/railmadad.git
+### 1) Clone and install
+
+```bash
+git clone https://github.com/your-org/railmadad.git
 cd railmadad
-`
+npm run install-all
+```
 
-2. **Install dependencies:**
-   `bash
+You can also install manually:
+
+```bash
 cd backend && npm install
 cd ../frontend && npm install
-`
+```
 
-3. **Set up your environment variables:** - Copy `.env.example` to `.env` in both `backend/` and `frontend/`. - Fill in your database, API keys, etc.
+### 2) Configure environment
 
-4. **Start the backend:**
-   `bash
-cd backend
-npm start
-`
+Create these files:
 
-5. **Start the frontend:**
-   `bash
-cd frontend
-npm run dev
-`
+- backend/.env (from backend/.env.example)
+- frontend/.env (from frontend/.env.example)
 
-6. **Open your browser:**  
-   Go to [http://localhost:5173](http://localhost:5173)
+### 3) Start development servers
 
----
+From the repository root:
 
-## Why This Project?
+```bash
+npm run dev-backend
+```
 
-We built RailMadad to make it easier for passengers to get their voices heard and for railway staff to respond quickly and efficiently. The AI features help sort and prioritize complaints, so nothing important slips through the cracks.
+In a second terminal:
 
----
+```bash
+npm run dev-frontend
+```
 
-## Want to Contribute?
+Default local URLs:
 
-We’d love your help! Whether you’re fixing a bug, adding a feature, or improving the docs, your contribution is welcome. Just fork the repo, make your changes, and open a pull request.
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:5000
 
----
+Note: backend/.env.example uses PORT=5001 while frontend/.env.example points to 5000. Keep these aligned in local setup.
 
-If you have any questions or ideas, feel free to open an issue or reach out. Thanks for checking out RailMadad!
+## Environment Variables
 
----
+### Backend (backend/.env)
 
-## Local Development
+Required for core app:
 
-### Prerequisites
+- PORT
+- NODE_ENV
+- MONGO_URI
+- JWT_SECRET
+- JWT_EXPIRE
+- ADMIN_EMAIL
+- ADMIN_PASSWORD
+- CLOUDINARY_CLOUD_NAME
+- CLOUDINARY_API_KEY
+- CLOUDINARY_API_SECRET
+- HUGGINGFACE_API_KEY
+- FRONTEND_URL
 
-- Node.js v16+
-- MongoDB Atlas account (or local MongoDB)
-- Cloudinary account
-- Hugging Face API key
-- Resend account (for emails)
-- Redis instance (for BullMQ queue — e.g. Redis Cloud free tier)
+Optional but recommended:
 
-### Backend Setup
+- HF_MODEL_CATEGORY
+- HF_MODEL_SENTIMENT
+- HF_MODEL_RESPONSE
+- HF_TIMEOUT
+- RESEND_API_KEY
+- RESEND_FROM_EMAIL
+- REDIS_URL
+- AI_QUEUE_CONCURRENCY
+- WEB_CONCURRENCY (production clustering)
+- TWILIO_ACCOUNT_SID
+- TWILIO_AUTH_TOKEN
+- TWILIO_FROM_NUMBER
+- SMS_COUNTRY_CODE
+- ADMIN_SECRET_KEY (if using admin register flow)
+
+### Frontend (frontend/.env)
+
+- VITE_API_URL (example: http://localhost:5000/api)
+
+## npm Scripts
+
+### Root
+
+- npm run install-all
+- npm run dev-backend
+- npm run dev-frontend
+- npm run build-frontend
+- npm run start-backend
+
+### Backend
+
+- npm start
+- npm run dev
+- npm test
+
+### Frontend
+
+- npm run dev
+- npm run build
+- npm run preview
+
+## API Overview
+
+Base URL (default): http://localhost:5000/api
+
+### Auth routes
+
+- POST /auth/register
+- POST /auth/login
+- POST /auth/admin-login
+- POST /auth/admin-register
+- POST /auth/send-otp
+- POST /auth/verify-otp
+- GET /auth/me
+- PUT /auth/me
+- POST /auth/forgot-password
+- PUT /auth/reset-password/:token
+
+### Complaint routes
+
+- POST /complaints
+- POST /complaints/track
+- GET /complaints/track
+- GET /complaints
+- GET /complaints/:id
+- PUT /complaints/:id
+- DELETE /complaints/:id
+- PUT /complaints/:id/satisfaction
+- PUT /complaints/:id/confirm-resolved
+- PUT /complaints/:id/close
+
+### Admin routes
+
+- GET /admin/complaints
+- PUT /admin/complaints/:id/status
+- PUT /admin/complaints/:id/mark-done
+- POST /admin/bulk-send-to-authority
+- GET /admin/analytics
+- GET /admin/stats
+- GET /admin/dispatch-log
+- PUT /admin/dispatch-log/:batchId/acknowledge
+
+## Testing
+
+Backend tests use Node's built-in test runner.
 
 ```bash
 cd backend
-npm install
+npm test
 ```
 
-Create `backend/.env`:
+Current test suite covers auth success paths, route validation, and complaint access controls.
 
-```env
-PORT=5000
-NODE_ENV=development
+## Operational Notes
 
-MONGODB_URI=your_mongodb_connection_string
+- In production, clustering is enabled and workers are spawned based on WEB_CONCURRENCY or CPU count.
+- Automation and control-unit schedulers run only on worker 1 (or single-process development).
+- Redis is optional in development; AI queueing falls back gracefully when REDIS_URL is unavailable.
 
-JWT_SECRET=your_jwt_secret_key
-JWT_EXPIRE=7d
+## Security Highlights
 
-CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-CLOUDINARY_API_KEY=your_cloudinary_api_key
-CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+- JWT-based auth and role checks.
+- Password hashing with bcryptjs.
+- Route-level validation via express-validator.
+- Rate limiting across general/auth/tracking endpoints.
+- CORS restrictions with configurable frontend origin.
 
-HUGGINGFACE_API_KEY=your_huggingface_api_key
-HF_MODEL_CATEGORY=facebook/bart-large-mnli
-HF_MODEL_SENTIMENT=distilbert/distilbert-base-uncased-finetuned-sst-2-english
-HF_MODEL_RESPONSE=openai-community/gpt2
+## Contributing
 
-RESEND_API_KEY=your_resend_api_key
-RESEND_FROM_EMAIL=onboarding@resend.dev
-
-REDIS_URL=your_redis_connection_string
-
-FRONTEND_URL=http://localhost:5173
-
-ADMIN_EMAIL=admin@yourdomain.com
-ADMIN_PASSWORD=your_admin_password
-```
-
-```bash
-npm run dev
-# Runs on http://localhost:5000
-```
-
-### Frontend Setup
-
-```bash
-cd frontend
-npm install
-npm run dev
-# Runs on http://localhost:5173
-```
-
-The frontend reads the backend URL from `VITE_API_URL` (defaults to `http://localhost:5000/api` if not set).
-
----
-
-## Security
-
-- Passwords hashed with bcrypt (salt rounds: 10)
-- JWT-based stateless authentication
-- Role-based access control (user / admin)
-- API rate limiting on all routes
-- Input validation via express-validator
-- File upload type and size restrictions (Multer + Cloudinary)
-- CORS restricted to `FRONTEND_URL`
-
----
+1. Fork and create a feature branch.
+2. Make your changes with tests where applicable.
+3. Run backend tests.
+4. Open a pull request with a clear change summary.
 
 ## License
 
 ISC
-
----
-
-Built with the MERN stack + Hugging Face AI + Resend
