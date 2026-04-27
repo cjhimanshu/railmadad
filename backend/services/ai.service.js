@@ -7,7 +7,7 @@ const CATEGORY_MODEL =
 const SENTIMENT_MODEL =
   process.env.HF_MODEL_SENTIMENT ||
   "distilbert/distilbert-base-uncased-finetuned-sst-2-english";
-const RESPONSE_MODEL = process.env.HF_MODEL_RESPONSE || "openai-community/gpt2";
+const RESPONSE_MODEL = process.env.HF_MODEL_RESPONSE || "google/flan-t5-small";
 
 // Timeout configuration (10 seconds for Hugging Face)
 const HF_TIMEOUT = parseInt(process.env.HF_TIMEOUT || "10000", 10);
