@@ -29,6 +29,8 @@ Live app: https://railmadad-gamma.vercel.app
 - Automatic fallback to in-process async handling when Redis is unavailable.
 - Cron-driven automation for escalation, status transitions, and operational logging.
 
+Note: Some community-hosted models may be removed or moved on Hugging Face. For the AI "response" model prefer currently supported text-generation models such as `google/flan-t5-small` or `google/flan-t5-base`. If you see 404s from the Hugging Face router, update `HF_MODEL_RESPONSE` in `backend/.env` (or `.env.example`).
+
 ## Tech Stack
 
 ### Backend
