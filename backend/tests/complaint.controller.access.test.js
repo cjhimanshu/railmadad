@@ -142,3 +142,33 @@ test("updateComplaint allows contact-mobile matched user for pending complaint",
   assert.equal(res.body.success, true);
   assert.equal(res.body.data._id, "complaint-3");
 });
+
+test("submitSatisfaction rejects malformed rating before reading complaint", async () => {
+  let didLookupComplaint = false;
+
+  Complaint.findById = async () => {
+    didLookupComplaint = true;
+    return null;
+  };
+
+  const req = {
+    params: { id: "complaint-4" },
+    body: { rating: "5abc", comment: "Looks valid at first glance" },
+    user: {
+      id: "user-4",
+      role: "user",
+      email: "traveler@example.com",
+      phone: "9876543210",
+    },
+  };
+  const res = createMockRes();
+
+  await complaintController.submitSatisfaction(req, res, (err) => {
+    throw err;
+  });
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.body.success, false);
+  assert.match(res.body.message, /rating must be between 1 and 5/i);
+  assert.equal(didLookupComplaint, false);
+});

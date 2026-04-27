@@ -45,6 +45,18 @@ const trackCredentialsValidation = [
     .withMessage("Password must be at least 8 characters"),
 ];
 
+const satisfactionValidation = [
+  body("rating")
+    .isInt({ min: 1, max: 5 })
+    .withMessage("Rating must be an integer between 1 and 5")
+    .toInt(),
+  body("comment")
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage("Comment cannot exceed 1000 characters"),
+];
+
 const trackLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 12,
@@ -85,7 +97,12 @@ router
   .put(complaintValidation, validate, updateComplaint)
   .delete(deleteComplaint);
 
-router.put("/:id/satisfaction", submitSatisfaction);
+router.put(
+  "/:id/satisfaction",
+  satisfactionValidation,
+  validate,
+  submitSatisfaction,
+);
 router.put("/:id/confirm-resolved", customerConfirmResolved);
 router.put("/:id/close", closeComplaint);
 
