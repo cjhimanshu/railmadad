@@ -3,6 +3,12 @@ const mongoose = require("mongoose");
 const connectDB = async () => {
   try {
     const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    if (!uri) {
+      throw new Error(
+        "Missing MongoDB connection string. Set MONGODB_URI or MONGO_URI in your environment.",
+      );
+    }
+
     const conn = await mongoose.connect(uri, {
       maxPoolSize: 100, // max simultaneous connections (default was 5)
       minPoolSize: 10, // keep at least 10 connections warm

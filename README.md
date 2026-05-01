@@ -126,7 +126,7 @@ Default local URLs:
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:5000
 
-Note: backend/.env.example uses PORT=5001 while frontend/.env.example points to 5000. Keep these aligned in local setup.
+Note: backend/.env.example uses PORT=5000 to match the backend default and the frontend API examples.
 
 ## Environment Variables
 
@@ -136,7 +136,7 @@ Required for core app:
 
 - PORT
 - NODE_ENV
-- MONGO_URI
+- MONGODB_URI or MONGO_URI
 - JWT_SECRET
 - JWT_EXPIRE
 - ADMIN_EMAIL
