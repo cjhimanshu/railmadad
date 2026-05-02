@@ -7,7 +7,7 @@ RailMadad helps passengers submit and track complaints, while giving admins tool
 Live apps:
 
 - RailMadad: https://railmadad-gamma.vercel.app/
-- Hotel Booking System: (provide live URL here)
+- Hotel Booking System: https://hotel-booking-system-eight-self.vercel.app/
 
 ## Key Features
 
