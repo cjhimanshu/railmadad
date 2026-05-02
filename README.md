@@ -11,6 +11,17 @@ Live apps:
 
 ## Key Features
 
+## Projects
+
+- **RailMadad** — Railway Complaint & Helpdesk Platform
+  - Repo: https://github.com/cjhimanshu/railmadad
+  - Live: https://railmadad-gamma.vercel.app/
+
+- **Hotel Booking System** — Full-Stack Reservation Platform
+  - Repo: https://github.com/cjhimanshu/hotel-booking-system
+  - Live: https://hotel-booking-system-eight-self.vercel.app/
+
+
 ### Passenger Experience
 
 - Submit complaints with or without a full account flow.
