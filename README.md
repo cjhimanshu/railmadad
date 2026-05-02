@@ -21,7 +21,6 @@ Live apps:
   - Repo: https://github.com/cjhimanshu/hotel-booking-system
   - Live: https://hotel-booking-system-eight-self.vercel.app/
 
-
 ### Passenger Experience
 
 - Submit complaints with or without a full account flow.
