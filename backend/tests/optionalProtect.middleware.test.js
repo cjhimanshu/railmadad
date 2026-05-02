@@ -38,12 +38,19 @@ test("optionalProtect proceeds with null user when token is invalid", async () =
 test("optionalProtect attaches user for valid token", async () => {
   // stub User.findById to return a user object
   const originalFindById = User.findById;
-  User.findById = () => ({ select: async () => ({ _id: "507f1f77bcf86cd799439011", role: "user" }) });
+  User.findById = () => ({
+    select: async () => ({ _id: "507f1f77bcf86cd799439011", role: "user" }),
+  });
 
-  const token = jwt.sign({ id: "507f1f77bcf86cd799439011" }, process.env.JWT_SECRET);
+  const token = jwt.sign(
+    { id: "507f1f77bcf86cd799439011" },
+    process.env.JWT_SECRET,
+  );
   const app = createApp();
 
-  const res = await request(app).get("/whoami").set("Authorization", `Bearer ${token}`);
+  const res = await request(app)
+    .get("/whoami")
+    .set("Authorization", `Bearer ${token}`);
 
   assert.equal(res.status, 200);
   assert.equal(res.body.user._id, "507f1f77bcf86cd799439011");
