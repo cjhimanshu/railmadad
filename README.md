@@ -4,7 +4,10 @@ AI-assisted railway complaint management platform built with the MERN stack.
 
 RailMadad helps passengers submit and track complaints, while giving admins tools to triage, dispatch, and resolve issues faster.
 
-Live app: https://railmadad-gamma.vercel.app
+Live apps:
+
+- RailMadad: https://railmadad-gamma.vercel.app/
+- Hotel Booking System: https://hotel-booking-system-eight-self.vercel.app/
 
 ## Key Features
 
