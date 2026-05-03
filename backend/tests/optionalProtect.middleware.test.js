@@ -36,10 +36,13 @@ test("optionalProtect proceeds with null user when token is invalid", async () =
 });
 
 test("optionalProtect attaches user for valid token", async () => {
-  // stub User.findById to return a user object
   const originalFindById = User.findById;
   User.findById = () => ({
-    select: async () => ({ _id: "507f1f77bcf86cd799439011", role: "user" }),
+    select: async () => ({
+      _id: "507f1f77bcf86cd799439011",
+      role: "user",
+      isActive: true,
+    }),
   });
 
   const token = jwt.sign(
@@ -48,12 +51,42 @@ test("optionalProtect attaches user for valid token", async () => {
   );
   const app = createApp();
 
-  const res = await request(app)
-    .get("/whoami")
-    .set("Authorization", `Bearer ${token}`);
+  try {
+    const res = await request(app)
+      .get("/whoami")
+      .set("Authorization", `Bearer ${token}`);
 
-  assert.equal(res.status, 200);
-  assert.equal(res.body.user._id, "507f1f77bcf86cd799439011");
+    assert.equal(res.status, 200);
+    assert.equal(res.body.user._id, "507f1f77bcf86cd799439011");
+  } finally {
+    User.findById = originalFindById;
+  }
+});
 
-  User.findById = originalFindById;
+test("optionalProtect treats inactive users as guests", async () => {
+  const originalFindById = User.findById;
+  User.findById = () => ({
+    select: async () => ({
+      _id: "507f1f77bcf86cd799439012",
+      role: "user",
+      isActive: false,
+    }),
+  });
+
+  const token = jwt.sign(
+    { id: "507f1f77bcf86cd799439012" },
+    process.env.JWT_SECRET,
+  );
+  const app = createApp();
+
+  try {
+    const res = await request(app)
+      .get("/whoami")
+      .set("Authorization", `Bearer ${token}`);
+
+    assert.equal(res.status, 200);
+    assert.equal(res.body.user, null);
+  } finally {
+    User.findById = originalFindById;
+  }
 });
