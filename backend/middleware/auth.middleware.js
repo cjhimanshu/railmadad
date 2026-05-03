@@ -72,6 +72,10 @@ exports.optionalProtect = async (req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         // Load user once from module scope (User is already required at top)
         req.user = await User.findById(decoded.id).select("-password");
+
+        if (!req.user || !req.user.isActive) {
+          req.user = null;
+        }
       } catch (_) {
         // Invalid token — proceed as guest
         req.user = null;
