@@ -1,6 +1,18 @@
 const express = require("express");
 const { body } = require("express-validator");
 const rateLimit = require("express-rate-limit");
+
+// Password strength validation: 8+ chars, uppercase, number, special char
+const passwordStrengthValidation = body("password")
+  .isLength({ min: 8 })
+  .withMessage("Password must be at least 8 characters")
+  .matches(/[A-Z]/)
+  .withMessage("Password must contain at least one uppercase letter")
+  .matches(/[0-9]/)
+  .withMessage("Password must contain at least one number")
+  .matches(/[!@#$%^&*]/)
+  .withMessage("Password must contain at least one special character (!@#$%^&*)");
+
 const {
   register,
   login,
@@ -57,9 +69,7 @@ const otpVerifyLimiter = rateLimit({
 const registerValidation = [
   body("name").trim().notEmpty().withMessage("Name is required"),
   body("email").isEmail().withMessage("Please provide a valid email"),
-  body("password")
-    .isLength({ min: 6 })
-    .withMessage("Password must be at least 6 characters"),
+  passwordStrengthValidation,
 ];
 
 const loginValidation = [
@@ -89,9 +99,7 @@ const adminLoginValidation = [
 const adminRegisterValidation = [
   body("name").trim().notEmpty().withMessage("Name is required"),
   body("email").isEmail().withMessage("Please provide a valid email"),
-  body("password")
-    .isLength({ min: 6 })
-    .withMessage("Password must be at least 6 characters"),
+  passwordStrengthValidation,
   body("adminKey").notEmpty().withMessage("Admin secret key is required"),
 ];
 
@@ -168,9 +176,7 @@ const forgotPasswordValidation = [
 ];
 
 const resetPasswordValidation = [
-  body("password")
-    .isLength({ min: 6 })
-    .withMessage("Password must be at least 6 characters"),
+  passwordStrengthValidation,
 ];
 
 const sendOtpValidation = [
