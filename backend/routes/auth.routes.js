@@ -11,7 +11,9 @@ const passwordStrengthValidation = body("password")
   .matches(/[0-9]/)
   .withMessage("Password must contain at least one number")
   .matches(/[!@#$%^&*]/)
-  .withMessage("Password must contain at least one special character (!@#$%^&*)");
+  .withMessage(
+    "Password must contain at least one special character (!@#$%^&*)",
+  );
 
 const {
   register,
@@ -175,9 +177,7 @@ const forgotPasswordValidation = [
   body("email").isEmail().withMessage("Please provide a valid email"),
 ];
 
-const resetPasswordValidation = [
-  passwordStrengthValidation,
-];
+const resetPasswordValidation = [passwordStrengthValidation];
 
 const sendOtpValidation = [
   body("email").isEmail().withMessage("Please provide a valid email"),
