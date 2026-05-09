@@ -4,6 +4,8 @@ const express = require("express");
 const request = require("supertest");
 
 process.env.RESEND_API_KEY = process.env.RESEND_API_KEY || "test_key";
+process.env.JWT_SECRET = process.env.JWT_SECRET || "test_jwt_secret";
+process.env.JWT_EXPIRE = process.env.JWT_EXPIRE || "1h";
 
 const authRoutes = require("../routes/auth.routes");
 
