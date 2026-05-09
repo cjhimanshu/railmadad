@@ -155,6 +155,39 @@ test("forgotPassword returns generic success for unknown email", async () => {
   assert.match(res.body.message, /if an account with that email exists/i);
 });
 
+test("resetPassword rejects passwords shorter than 8 characters", async () => {
+  const req = {
+    params: {
+      token: "reset-token",
+    },
+    body: {
+      password: "short",
+    },
+  };
+  const res = createMockRes();
+
+  await authController.resetPassword(req, res, (err) => {
+    throw err;
+  });
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.body.success, false);
+  assert.match(res.body.message, /at least 8 characters/i);
+});
+
+test("User schema enforces the 8-character password minimum", () => {
+  const user = new User({
+    name: "Schema Test",
+    email: "schema-test@example.com",
+    password: "short1!",
+  });
+
+  const validationError = user.validateSync();
+
+  assert.ok(validationError);
+  assert.match(validationError.errors.password.message, /at least 8 characters/i);
+});
+
 test("verifyOtp succeeds for active existing user", async () => {
   const otpHash = await bcrypt.hash("123456", 10);
   OtpModel.findOne = async () => ({

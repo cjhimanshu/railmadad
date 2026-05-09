@@ -533,10 +533,10 @@ exports.forgotPassword = async (req, res, next) => {
 exports.resetPassword = async (req, res, next) => {
   try {
     const { password } = req.body;
-    if (!password || password.length < 6) {
+    if (!password || password.length < 8) {
       return res.status(400).json({
         success: false,
-        message: "Password must be at least 6 characters",
+        message: "Password must be at least 8 characters",
       });
     }
     const hashedToken = crypto
