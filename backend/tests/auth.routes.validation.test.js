@@ -93,7 +93,7 @@ test("PUT /api/auth/reset-password/:token validates password length", async () =
 
   assert.equal(res.status, 400);
   assert.equal(res.body.success, false);
-  assert.match(res.body.message, /at least 6 characters/i);
+  assert.match(res.body.message, /at least 8 characters/i);
 });
 
 test("POST /api/auth/login applies brute-force rate limit", async () => {
