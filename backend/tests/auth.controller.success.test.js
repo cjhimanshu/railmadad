@@ -185,7 +185,10 @@ test("User schema enforces the 8-character password minimum", () => {
   const validationError = user.validateSync();
 
   assert.ok(validationError);
-  assert.match(validationError.errors.password.message, /at least 8 characters/i);
+  assert.match(
+    validationError.errors.password.message,
+    /at least 8 characters/i,
+  );
 });
 
 test("verifyOtp succeeds for active existing user", async () => {
