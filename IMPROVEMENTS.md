@@ -14,19 +14,20 @@ This document outlines meaningful improvements made to enhance reliability, secu
 
 ```javascript
 // Prevents unhandled promise rejections from crashing worker processes
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
   // TODO: Integrate with error tracking service (Sentry, LogRocket, etc.)
 });
 
 // Catches uncaught exceptions and logs them before exiting
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
   process.exit(1); // Let cluster manager restart worker
 });
 ```
 
 **Impact:**
+
 - Prevents silent crashes in production when unhandled errors occur
 - Ensures visibility into critical failures
 - Worker processes are properly restarted by cluster manager
@@ -41,6 +42,7 @@ process.on('uncaughtException', (err) => {
 **Change:** Added pagination support with default limits.
 
 **Before:**
+
 ```javascript
 const complaints = await Complaint.find({...})
   .sort({ createdAt: -1 })
@@ -48,6 +50,7 @@ const complaints = await Complaint.find({...})
 ```
 
 **After:**
+
 ```javascript
 const page = Math.max(1, parseInt(req.query.page) || 1);
 const limit = Math.min(100, parseInt(req.query.limit) || 10); // Cap at 100
@@ -65,12 +68,14 @@ const [complaints, total] = await Promise.all([
 ```
 
 **API Usage:**
+
 ```bash
 GET /api/complaints?page=1&limit=10
 GET /api/complaints?page=2&limit=20
 ```
 
 **Impact:**
+
 - Prevents memory exhaustion with large complaint datasets
 - Faster response times for users with many complaints
 - Scalable query performance with indexes
@@ -85,15 +90,18 @@ GET /api/complaints?page=2&limit=20
 **Change:** Added validation to prevent wiping out complaint title/description.
 
 **Before:**
+
 ```javascript
 const { title: nextTitle, description: nextDescription } = req.body;
 // Could be undefined - no validation
-complaint = await Complaint.findByIdAndUpdate(req.params.id, 
-  { title: nextTitle, description: nextDescription }
-);
+complaint = await Complaint.findByIdAndUpdate(req.params.id, {
+  title: nextTitle,
+  description: nextDescription,
+});
 ```
 
 **After:**
+
 ```javascript
 const { title: nextTitle, description: nextDescription } = req.body;
 
@@ -115,6 +123,7 @@ complaint = await Complaint.findByIdAndUpdate(req.params.id, updateData, {...});
 ```
 
 **Impact:**
+
 - Prevents accidental data loss through empty PATCH requests
 - Better error messages for API consumers
 - Protects complaint integrity
@@ -129,6 +138,7 @@ complaint = await Complaint.findByIdAndUpdate(req.params.id, updateData, {...});
 **Change:** Fixed state management when customer rates resolved complaints.
 
 **Before:**
+
 ```javascript
 if (rating < 3) {
   complaint.closureBlocked = true;
@@ -137,6 +147,7 @@ if (rating < 3) {
 ```
 
 **After:**
+
 ```javascript
 // Only revert if complaint is not already resolved
 if (rating < 3 && complaint.status !== "resolved") {
@@ -150,14 +161,16 @@ if (rating < 3 && complaint.status !== "resolved") {
 ```
 
 **Response Message:**
+
 ```javascript
 // Conditional message based on actual state change
 message: rating < 3 && complaint.status !== "resolved"
   ? "Rating submitted. Complaint reopened for further action due to low satisfaction."
-  : "Thank you for your feedback!"
+  : "Thank you for your feedback!";
 ```
 
 **Impact:**
+
 - Prevents workflow state violations
 - Resolved complaints remain closed when re-rated
 - Maintains audit trail through automation logs
@@ -172,6 +185,7 @@ message: rating < 3 && complaint.status !== "resolved"
 **Change:** Improved error handling to enable retries instead of marking failed jobs as processed.
 
 **Before:**
+
 ```javascript
 catch (err) {
   console.error(`Failed to process complaint ${complaintId}:`, err.message);
@@ -181,10 +195,11 @@ catch (err) {
 ```
 
 **After:**
+
 ```javascript
 catch (err) {
   console.error(`Failed to process complaint ${complaintId}:`, err.message);
-  
+
   if (redisConnected) {
     throw err; // Let BullMQ retry with exponential backoff (attempts: 3)
   } else {
@@ -197,11 +212,13 @@ catch (err) {
 ```
 
 **BullMQ Retry Strategy:**
+
 - 3 attempts with exponential backoff (2s, 4s, 8s)
 - Failed jobs stay in queue for monitoring
 - Automation service can also retry
 
 **Impact:**
+
 - Prevents silent categorization failures
 - Automatic retries without manual intervention
 - Better observability of AI processing issues
@@ -211,31 +228,34 @@ catch (err) {
 
 ## Summary of Changes
 
-| Issue | Severity | Fix | Impact |
-|-------|----------|-----|--------|
+| Issue                  | Severity     | Fix                    | Impact                  |
+| ---------------------- | ------------ | ---------------------- | ----------------------- |
 | Silent process crashes | **Critical** | Process error handlers | Prevents worker crashes |
-| Memory exhaustion | **High** | Pagination | Enables scalability |
-| Data loss via PATCH | **High** | Input validation | Protects complaint data |
-| Workflow violations | **Medium** | State logic fix | Maintains consistency |
-| Silent AI failures | **Medium** | Retry logic | Ensures processing |
+| Memory exhaustion      | **High**     | Pagination             | Enables scalability     |
+| Data loss via PATCH    | **High**     | Input validation       | Protects complaint data |
+| Workflow violations    | **Medium**   | State logic fix        | Maintains consistency   |
+| Silent AI failures     | **Medium**   | Retry logic            | Ensures processing      |
 
 ---
 
 ## Testing Recommendations
 
 1. **Process Handlers:**
+
    ```bash
    # Simulate unhandled rejection to verify handler
    NODE_ENV=production npm run dev
    ```
 
 2. **Pagination:**
+
    ```bash
    curl "http://localhost:5000/api/complaints?page=1&limit=5"
    curl "http://localhost:5000/api/complaints?page=2&limit=5"
    ```
 
 3. **Update Validation:**
+
    ```bash
    # Should fail - empty title
    curl -X PUT http://localhost:5000/api/complaints/ID \
@@ -260,4 +280,3 @@ catch (err) {
 - [ ] Implement complaint update history/versioning
 - [ ] Add request logging middleware for debugging
 - [ ] Consider bulk operations for performance optimization
-

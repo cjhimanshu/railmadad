@@ -213,18 +213,18 @@ server.on("error", (err) => {
 
 // ── Process-level error handlers ─────────────────────────────────────────────────
 // Prevent silent crashes in production from unhandled rejections or exceptions
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
   // Log to monitoring service in production
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === "production") {
     // TODO: Send to error tracking service (Sentry, LogRocket, etc.)
   }
 });
 
-process.on('uncaughtException', (err) => {
-  console.error('❌ Uncaught Exception:', err);
+process.on("uncaughtException", (err) => {
+  console.error("❌ Uncaught Exception:", err);
   // Log to monitoring service in production
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === "production") {
     // TODO: Send to error tracking service (Sentry, LogRocket, etc.)
   }
   // Exit to let cluster manager restart worker

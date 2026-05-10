@@ -61,10 +61,7 @@ const processAIJob = async (complaintId, title, description) => {
       `✅ [AI QUEUE] Complaint ${complaintId} processed — category:${aiResults.category} priority:${aiResults.priority}`,
     );
   } catch (err) {
-    console.error(
-      `Failed to process complaint ${complaintId}:`,
-      err.message,
-    );
+    console.error(`Failed to process complaint ${complaintId}:`, err.message);
     // Re-throw so BullMQ can retry. Don't mark as processed on failure.
     // This ensures the complaint can be retried later by the automation service.
     if (redisConnected) {

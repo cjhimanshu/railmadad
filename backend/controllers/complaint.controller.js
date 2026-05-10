@@ -331,14 +331,10 @@ exports.updateComplaint = async (req, res, next) => {
       updateData.description = String(nextDescription).trim();
     }
 
-    complaint = await Complaint.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      {
-        new: true,
-        runValidators: true,
-      },
-    ).populate("userId", "name email");
+    complaint = await Complaint.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+      runValidators: true,
+    }).populate("userId", "name email");
 
     res.status(200).json({
       success: true,
