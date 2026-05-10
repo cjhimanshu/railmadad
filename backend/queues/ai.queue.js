@@ -61,16 +61,17 @@ const processAIJob = async (complaintId, title, description) => {
       `✅ [AI QUEUE] Complaint ${complaintId} processed — category:${aiResults.category} priority:${aiResults.priority}`,
     );
   } catch (err) {
-    console.error(
-      `❌ [AI QUEUE] Failed to process complaint ${complaintId}:`,
-      err.message,
-    );
-    // Still mark as processed so it's not stuck in limbo
-    try {
-      await require("../models/Complaint").findByIdAndUpdate(complaintId, {
-        aiProcessed: true,
-      });
-    } catch (_) {}
+    console.error(`Failed to process complaint ${complaintId}:`, err.message);
+    // Re-throw so BullMQ can retry. Don't mark as processed on failure.
+    // This ensures the complaint can be retried later by the automation service.
+    if (redisConnected) {
+      throw err; // Let BullMQ retry with exponential backoff
+    } else {
+      // In fallback mode (no Redis), log but don't mark as processed
+      console.warn(
+        `Complaint ${complaintId} AI processing failed. Will be retried by automation service.`,
+      );
+    }
   }
 };
 
