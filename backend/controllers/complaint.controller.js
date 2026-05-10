@@ -220,19 +220,33 @@ exports.trackComplaintWithCredentials = async (req, res, next) => {
 };
 
 // @desc    Get all complaints for logged in user
-// @route   GET /api/complaints
+// @route   GET /api/complaints?page=1&limit=10
 // @access  Private
 exports.getUserComplaints = async (req, res, next) => {
   try {
-    const complaints = await Complaint.find({
-      $or: [{ userId: req.user.id }, { contactEmail: req.user.email }],
-    })
-      .sort({ createdAt: -1 })
-      .populate("userId", "name email");
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, parseInt(req.query.limit) || 10); // Cap at 100
+    const skip = (page - 1) * limit;
+
+    const [complaints, total] = await Promise.all([
+      Complaint.find({
+        $or: [{ userId: req.user.id }, { contactEmail: req.user.email }],
+      })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("userId", "name email"),
+      Complaint.countDocuments({
+        $or: [{ userId: req.user.id }, { contactEmail: req.user.email }],
+      }),
+    ]);
 
     res.status(200).json({
       success: true,
       count: complaints.length,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
       data: complaints,
     });
   } catch (error) {
@@ -303,9 +317,23 @@ exports.updateComplaint = async (req, res, next) => {
 
     const { title: nextTitle, description: nextDescription } = req.body;
 
+    // Validate that title is provided and not empty
+    if (!nextTitle || !String(nextTitle).trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Title is required and cannot be empty",
+      });
+    }
+
+    // Prepare update object with only non-undefined fields
+    const updateData = { title: String(nextTitle).trim() };
+    if (nextDescription !== undefined) {
+      updateData.description = String(nextDescription).trim();
+    }
+
     complaint = await Complaint.findByIdAndUpdate(
       req.params.id,
-      { title: nextTitle, description: nextDescription },
+      updateData,
       {
         new: true,
         runValidators: true,
@@ -393,7 +421,8 @@ exports.submitSatisfaction = async (req, res, next) => {
     complaint.satisfactionComment = comment || null;
     complaint.satisfactionSubmittedAt = new Date();
 
-    if (rating < 3) {
+    // Only block closure if complaint is not already resolved
+    if (rating < 3 && complaint.status !== "resolved") {
       complaint.closureBlocked = true;
       complaint.closureBlockedReason = `Customer rated ${rating}/5: "${comment || "No comment"}"`;
       complaint.customerMarkedDone = false;
@@ -417,7 +446,7 @@ exports.submitSatisfaction = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message:
-        rating < 3
+        rating < 3 && complaint.status !== "resolved"
           ? "Rating submitted. Complaint reopened for further action due to low satisfaction."
           : "Thank you for your feedback!",
       data: complaint,
