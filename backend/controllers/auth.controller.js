@@ -68,6 +68,10 @@ const calculateAge = (dateOfBirth) => {
     return null;
   }
 
+  if (dob.getTime() > Date.now()) {
+    return null;
+  }
+
   const today = new Date();
   let age = today.getFullYear() - dob.getFullYear();
   const hasBirthdayPassed =

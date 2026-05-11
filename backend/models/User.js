@@ -50,6 +50,12 @@ const userSchema = new mongoose.Schema(
     dateOfBirth: {
       type: Date,
       default: undefined,
+      validate: {
+        validator(value) {
+          return !value || value.getTime() <= Date.now();
+        },
+        message: "Date of birth cannot be in the future",
+      },
     },
     occupation: {
       type: String,

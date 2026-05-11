@@ -191,6 +191,23 @@ test("User schema enforces the 8-character password minimum", () => {
   );
 });
 
+test("User schema rejects future dates of birth", () => {
+  const user = new User({
+    name: "DOB Test",
+    email: "dob-test@example.com",
+    password: "Password123!",
+    dateOfBirth: new Date(Date.now() + 24 * 60 * 60 * 1000),
+  });
+
+  const validationError = user.validateSync();
+
+  assert.ok(validationError);
+  assert.match(
+    validationError.errors.dateOfBirth.message,
+    /cannot be in the future/i,
+  );
+});
+
 test("verifyOtp succeeds for active existing user", async () => {
   const otpHash = await bcrypt.hash("123456", 10);
   OtpModel.findOne = async () => ({
