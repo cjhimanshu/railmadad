@@ -7,3 +7,6 @@ uploads/
 .idea/
 dist/
 build/
+.docker/
+.dockerignore
+docker-compose.override.yml

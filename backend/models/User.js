@@ -14,10 +14,7 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      match: [
-        /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,10})+$/,
-        "Please provide a valid email",
-      ],
+      match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,10})+$/, "Please provide a valid email"],
     },
     password: {
       type: String,
@@ -38,13 +35,7 @@ const userSchema = new mongoose.Schema(
     },
     gender: {
       type: String,
-      enum: [
-        "male",
-        "female",
-        "transgender",
-        "non_binary",
-        "prefer_not_to_say",
-      ],
+      enum: ["male", "female", "transgender", "non_binary", "prefer_not_to_say"],
       default: undefined,
     },
     dateOfBirth: {
@@ -119,7 +110,7 @@ const userSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  },
+  }
 );
 
 module.exports = mongoose.model("User", userSchema);
