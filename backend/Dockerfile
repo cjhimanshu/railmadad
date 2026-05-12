@@ -12,8 +12,8 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Run tests
-RUN npm test
+# Note: Tests are validated separately in CI pipeline (github actions)
+# This build stage focuses on preparing code for production
 
 # Stage 2: Production
 FROM node:20-alpine
