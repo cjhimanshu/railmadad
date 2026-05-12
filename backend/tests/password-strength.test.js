@@ -78,12 +78,18 @@ test("POST /api/auth/register accepts valid strong password", async () => {
     password: "StrongP@ss123",
   });
 
-  // Strong password passes validation — response should not contain password strength errors
-  const msg = res.body.message || "";
-  assert.equal(msg.includes("uppercase"), false);
-  assert.equal(msg.includes("number"), false);
-  assert.equal(msg.includes("special character"), false);
-  assert.equal(msg.includes("8 characters"), false);
+  // Strong password passes validation — must return 201/success or explicit non-400 error.
+  // Fail if validation rejected it due to password strength.
+  if (res.status === 400) {
+    const msg = res.body.message || "";
+    assert.fail(
+      `Strong password was rejected. Message: ${msg}. ` +
+        `This may indicate a DB timeout or validation logic bug.`
+    );
+  }
+
+  // Non-400 status is acceptable (may be 201 if DB is available, or 409 if email exists, etc).
+  assert.notEqual(res.status, 400, "Strong password should not fail validation");
 });
 
 test("POST /api/auth/admin-register enforces same password strength rules", async () => {

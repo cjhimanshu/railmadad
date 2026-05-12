@@ -7,3 +7,5 @@ build/
 *.log
 .vscode/
 .idea/
+.dockerignore
+nginx.conf.swp

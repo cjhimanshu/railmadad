@@ -11,12 +11,11 @@ if (process.env.NODE_ENV === "production" && cluster.isPrimary) {
   console.log(`🖥️  Primary ${process.pid} → spawning ${numCPUs} workers`);
   for (let i = 0; i < numCPUs; i++) cluster.fork();
   cluster.on("exit", (worker, code, signal) => {
-    console.warn(
-      `⚠️  Worker ${worker.process.pid} died (${signal || code}) — restarting`,
-    );
+    console.warn(`⚠️  Worker ${worker.process.pid} died (${signal || code}) — restarting`);
     cluster.fork();
   });
-  return; // Primary only manages workers; workers run the actual server
+} else {
+  // Workers run the actual server
 }
 
 // Import core dependencies
@@ -40,19 +39,14 @@ async function seedAdmin() {
     const adminEmail = process.env.ADMIN_EMAIL;
     const adminPassword = process.env.ADMIN_PASSWORD;
     if (!adminEmail || !adminPassword) {
-      console.warn(
-        "⚠️ Admin seed skipped: ADMIN_EMAIL or ADMIN_PASSWORD is missing in .env",
-      );
+      console.warn("⚠️ Admin seed skipped: ADMIN_EMAIL or ADMIN_PASSWORD is missing in .env");
       return;
     }
 
-    const existing = await User.findOne({ email: adminEmail }).select(
-      "+password",
-    );
+    const existing = await User.findOne({ email: adminEmail }).select("+password");
     if (existing) {
       // Ensure role is admin and password is up to date
-      const hasPasswordHash =
-        typeof existing.password === "string" && existing.password.length > 0;
+      const hasPasswordHash = typeof existing.password === "string" && existing.password.length > 0;
       const match = hasPasswordHash
         ? await bcrypt.compare(adminPassword, existing.password)
         : false;
@@ -122,14 +116,13 @@ app.use(
       ].filter(Boolean);
 
       // Allow any Vercel preview/production URL for this project
-      const isVercel =
-        origin.endsWith(".vercel.app") || origin.includes("railmadad");
+      const isVercel = origin.endsWith(".vercel.app") || origin.includes("railmadad");
 
       if (allowed.includes(origin) || isVercel) return callback(null, true);
       callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
-  }),
+  })
 );
 
 // Rate limiting
@@ -156,8 +149,7 @@ const complaintLimiter = rateLimit({
   max: 100,
   message: {
     success: false,
-    message:
-      "Complaint submission limit reached. Please wait before submitting again.",
+    message: "Complaint submission limit reached. Please wait before submitting again.",
   },
 });
 
@@ -170,8 +162,7 @@ app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.get("/", (req, res) => {
   res.json({
     success: true,
-    message:
-      "RailMadad API - AI-Integrated Railway Complaint Management System",
+    message: "RailMadad API - AI-Integrated Railway Complaint Management System",
     version: "1.0.0",
     uptime: Math.floor(process.uptime()),
     timestamp: new Date().toISOString(),
@@ -188,21 +179,17 @@ app.use(errorHandler);
 // Start server
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
-  console.log(
-    `🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`,
-  );
+  console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
 });
 
 // Handle server errors (e.g., port in use)
 server.on("error", (err) => {
   if (err.code === "EADDRINUSE") {
-    console.error(
-      `❌ Port ${PORT} is already in use. Trying port ${parseInt(PORT) + 1}...`,
-    );
+    console.error(`❌ Port ${PORT} is already in use. Trying port ${parseInt(PORT) + 1}...`);
     server.close();
     app.listen(parseInt(PORT) + 1, () => {
       console.log(
-        `🚀 Server running in ${process.env.NODE_ENV} mode on port ${parseInt(PORT) + 1}`,
+        `🚀 Server running in ${process.env.NODE_ENV} mode on port ${parseInt(PORT) + 1}`
       );
     });
   } else {
