@@ -1,6 +1,6 @@
-const { readdirSync, statSync } = require('fs');
-const { join, resolve } = require('path');
-const { spawnSync } = require('child_process');
+const { readdirSync, statSync } = require("fs");
+const { join, resolve } = require("path");
+const { spawnSync } = require("child_process");
 
 function collectTestFiles(directory) {
   return readdirSync(directory).flatMap((entry) => {
@@ -11,11 +11,11 @@ function collectTestFiles(directory) {
       return collectTestFiles(filePath);
     }
 
-    return filePath.endsWith('.test.js') ? [filePath] : [];
+    return filePath.endsWith(".test.js") ? [filePath] : [];
   });
 }
 
-const testsDirectory = resolve(__dirname, '..', 'tests');
+const testsDirectory = resolve(__dirname, "..", "tests");
 const testFiles = collectTestFiles(testsDirectory);
 
 if (testFiles.length === 0) {
@@ -23,8 +23,8 @@ if (testFiles.length === 0) {
   process.exit(1);
 }
 
-const result = spawnSync(process.execPath, ['--test', ...testFiles], {
-  stdio: 'inherit',
+const result = spawnSync(process.execPath, ["--test", ...testFiles], {
+  stdio: "inherit",
 });
 
 process.exit(result.status ?? 1);
