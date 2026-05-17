@@ -113,4 +113,29 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+// Ensure sensitive fields are removed when converting to JSON/object
+userSchema.set("toJSON", {
+  transform(doc, ret) {
+    ret.id = ret._id;
+    delete ret._id;
+    delete ret.__v;
+    delete ret.password;
+    delete ret.resetPasswordToken;
+    delete ret.resetPasswordExpire;
+    return ret;
+  },
+});
+
+userSchema.set("toObject", {
+  transform(doc, ret) {
+    ret.id = ret._id;
+    delete ret._id;
+    delete ret.__v;
+    delete ret.password;
+    delete ret.resetPasswordToken;
+    delete ret.resetPasswordExpire;
+    return ret;
+  },
+});
+
 module.exports = mongoose.model("User", userSchema);
