@@ -1,14 +1,14 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
+const test = require("node:test");
+const assert = require("node:assert/strict");
 
-const User = require('../models/User');
+const User = require("../models/User");
 
-test('User model JSON transform removes sensitive fields and exposes id', () => {
+test("User model JSON transform removes sensitive fields and exposes id", () => {
   const u = new User({
-    name: 'Alice',
-    email: 'Alice@Example.COM',
-    password: 'Secret123!',
-    resetPasswordToken: 'token',
+    name: "Alice",
+    email: "Alice@Example.COM",
+    password: "Secret123!",
+    resetPasswordToken: "token",
     resetPasswordExpire: new Date(),
   });
 
@@ -20,5 +20,5 @@ test('User model JSON transform removes sensitive fields and exposes id', () => 
   assert.equal(json.__v, undefined);
   assert.equal(json._id, undefined);
   assert.ok(json.id);
-  assert.equal(json.email, 'alice@example.com');
+  assert.equal(json.email, "alice@example.com");
 });
