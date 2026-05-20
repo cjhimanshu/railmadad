@@ -8,10 +8,10 @@ const os = require("os");
 
 if (process.env.NODE_ENV === "production" && cluster.isPrimary) {
   const numCPUs = parseInt(process.env.WEB_CONCURRENCY) || os.cpus().length;
-  console.log(`🖥️  Primary ${process.pid} → spawning ${numCPUs} workers`);
+  logger.info(`🖥️  Primary ${process.pid} → spawning ${numCPUs} workers`);
   for (let i = 0; i < numCPUs; i++) cluster.fork();
   cluster.on("exit", (worker, code, signal) => {
-    console.warn(`⚠️  Worker ${worker.process.pid} died (${signal || code}) — restarting`);
+    logger.warn(`⚠️  Worker ${worker.process.pid} died (${signal || code}) — restarting`);
     cluster.fork();
   });
 } else {
@@ -30,6 +30,7 @@ const errorHandler = require("./middleware/error.middleware");
 const { startAutomation } = require("./services/automation.service");
 const { startControlUnit } = require("./services/controlUnit.service");
 const { initQueue } = require("./queues/ai.queue");
+const logger = require("./utils/logger");
 
 // Seed the fixed admin account on startup
 // Ensures there is always an admin user with credentials from .env
@@ -39,7 +40,7 @@ async function seedAdmin() {
     const adminEmail = process.env.ADMIN_EMAIL;
     const adminPassword = process.env.ADMIN_PASSWORD;
     if (!adminEmail || !adminPassword) {
-      console.warn("⚠️ Admin seed skipped: ADMIN_EMAIL or ADMIN_PASSWORD is missing in .env");
+      logger.warn("⚠️ Admin seed skipped: ADMIN_EMAIL or ADMIN_PASSWORD is missing in .env");
       return;
     }
 
@@ -55,9 +56,9 @@ async function seedAdmin() {
         existing.role = "admin";
         existing.isActive = true;
         await existing.save();
-        console.log("✅ Admin account updated");
+        logger.info("✅ Admin account updated");
       } else {
-        console.log("✅ Admin account ready");
+        logger.info("✅ Admin account ready");
       }
     } else {
       await User.create({
@@ -67,10 +68,10 @@ async function seedAdmin() {
         role: "admin",
         isActive: true,
       });
-      console.log("✅ Admin account created:", adminEmail);
+      logger.info("✅ Admin account created:", { email: adminEmail });
     }
   } catch (err) {
-    console.error("❌ Admin seed error:", err.message);
+    logger.error("❌ Admin seed error:", { message: err.message });
   }
 }
 
@@ -157,6 +158,7 @@ app.use(generalLimiter);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
+app.use(logger.requestLogger);
 
 // Routes
 app.get("/", (req, res) => {
@@ -179,21 +181,21 @@ app.use(errorHandler);
 // Start server
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
-  console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  logger.info(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
 });
 
 // Handle server errors (e.g., port in use)
 server.on("error", (err) => {
   if (err.code === "EADDRINUSE") {
-    console.error(`❌ Port ${PORT} is already in use. Trying port ${parseInt(PORT) + 1}...`);
+    logger.error(`❌ Port ${PORT} is already in use. Trying port ${parseInt(PORT) + 1}...`);
     server.close();
     app.listen(parseInt(PORT) + 1, () => {
-      console.log(
+      logger.info(
         `🚀 Server running in ${process.env.NODE_ENV} mode on port ${parseInt(PORT) + 1}`
       );
     });
   } else {
-    console.error("Server error:", err);
+    logger.error("Server error:", { error: err.message });
     process.exit(1);
   }
 });
@@ -201,7 +203,7 @@ server.on("error", (err) => {
 // ── Process-level error handlers ─────────────────────────────────────────────────
 // Prevent silent crashes in production from unhandled rejections or exceptions
 process.on("unhandledRejection", (reason, promise) => {
-  console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
+  logger.error("❌ Unhandled Rejection", { promise: String(promise), reason: String(reason) });
   // Log to monitoring service in production
   if (process.env.NODE_ENV === "production") {
     // TODO: Send to error tracking service (Sentry, LogRocket, etc.)
@@ -209,7 +211,7 @@ process.on("unhandledRejection", (reason, promise) => {
 });
 
 process.on("uncaughtException", (err) => {
-  console.error("❌ Uncaught Exception:", err);
+  logger.error("❌ Uncaught Exception:", { message: err.message, stack: err.stack });
   // Log to monitoring service in production
   if (process.env.NODE_ENV === "production") {
     // TODO: Send to error tracking service (Sentry, LogRocket, etc.)

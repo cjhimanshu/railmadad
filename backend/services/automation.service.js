@@ -1,8 +1,7 @@
 const cron = require("node-cron");
 const Complaint = require("../models/Complaint");
-const {
-  sendComplaintProgressUpdate,
-} = require("./complaintTracking.service");
+const logger = require("../utils/logger");
+const { sendComplaintProgressUpdate } = require("./complaintTracking.service");
 
 const CATEGORY_DEPARTMENT_MAP = {
   cleanliness: "maintenance",
@@ -26,11 +25,7 @@ const SLA_HOURS = {
   low: 168,
 };
 
-const notifyProgressSafely = async ({
-  complaint,
-  previousTrackingStatus,
-  previousStatus,
-}) => {
+const notifyProgressSafely = async ({ complaint, previousTrackingStatus, previousStatus }) => {
   try {
     await sendComplaintProgressUpdate({
       complaint,
@@ -38,13 +33,12 @@ const notifyProgressSafely = async ({
       previousStatus,
     });
   } catch (error) {
-    console.error("[AUTOMATION] notification error:", error.message);
+    logger.error("[AUTOMATION] notification error:", { message: error.message });
   }
 };
 
 exports.assignDepartmentAndSLA = async (complaint) => {
-  const department =
-    CATEGORY_DEPARTMENT_MAP[complaint.category] || "customer_service";
+  const department = CATEGORY_DEPARTMENT_MAP[complaint.category] || "customer_service";
   const slaHours = SLA_HOURS[complaint.priority] || 72;
   const slaDeadline = new Date(Date.now() + slaHours * 60 * 60 * 1000);
 
@@ -56,9 +50,7 @@ exports.assignDepartmentAndSLA = async (complaint) => {
   });
 
   await complaint.save();
-  console.log(
-    `[AUTOMATION] Complaint ${complaint._id} -> ${department} (SLA: ${slaHours}h)`,
-  );
+  logger.info(`[AUTOMATION] Complaint assigned`, { id: complaint._id, department, slaHours });
   return complaint;
 };
 
@@ -86,8 +78,7 @@ const autoMarkInProgress = async () => {
     }
     complaint.automationLog.push({
       action: "AUTO_IN_PROGRESS",
-      details:
-        "No action taken within 30 minutes. Automatically moved to in_progress.",
+      details: "No action taken within 30 minutes. Automatically moved to in_progress.",
       performedAt: now,
     });
 
@@ -100,9 +91,7 @@ const autoMarkInProgress = async () => {
   }
 
   if (complaints.length > 0) {
-    console.log(
-      `[AUTOMATION] Marked ${complaints.length} complaint(s) as in_progress`,
-    );
+    console.log(`[AUTOMATION] Marked ${complaints.length} complaint(s) as in_progress`);
   }
 };
 
@@ -162,8 +151,7 @@ const autoResolveLowPriority = async () => {
     });
     complaint.automationLog.push({
       action: "AUTO_RESOLVED",
-      details:
-        "Low priority complaint automatically resolved after 7 days in progress.",
+      details: "Low priority complaint automatically resolved after 7 days in progress.",
       performedAt: now,
     });
 
@@ -176,9 +164,7 @@ const autoResolveLowPriority = async () => {
   }
 
   if (complaints.length > 0) {
-    console.log(
-      `[AUTOMATION] Auto-resolved ${complaints.length} low-priority complaint(s)`,
-    );
+    console.log(`[AUTOMATION] Auto-resolved ${complaints.length} low-priority complaint(s)`);
   }
 };
 
@@ -212,9 +198,7 @@ const autoRejectStale = async () => {
   }
 
   if (complaints.length > 0) {
-    console.log(
-      `[AUTOMATION] Auto-rejected ${complaints.length} stale complaint(s)`,
-    );
+    console.log(`[AUTOMATION] Auto-rejected ${complaints.length} stale complaint(s)`);
   }
 };
 
@@ -230,7 +214,7 @@ const logStats = async () => {
   ]);
 
   console.log(
-    `[AUTOMATION STATS] pending:${pending} | in_progress:${inProgress} | resolved:${resolved} | urgent_active:${urgent}`,
+    `[AUTOMATION STATS] pending:${pending} | in_progress:${inProgress} | resolved:${resolved} | urgent_active:${urgent}`
   );
 };
 

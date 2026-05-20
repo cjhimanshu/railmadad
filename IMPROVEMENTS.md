@@ -273,10 +273,232 @@ catch (err) {
 
 ---
 
+## 6. ✅ Structured Logging Module (Observability & Debugging)
+
+**Files:**
+
+- `backend/utils/logger.js` (NEW)
+- `backend/server.js`, `backend/middleware/error.middleware.js`, `backend/services/ai.service.js`, `backend/services/automation.service.js`, `backend/queues/ai.queue.js`
+
+**Change:** Replaced scattered `console.log`/`console.error` calls with centralized, structured logging.
+
+**Before:**
+
+```javascript
+console.log(`🖥️  Primary ${process.pid} → spawning ${numCPUs} workers`);
+console.error("❌ Admin seed error:", err.message);
+console.warn("[AI ALERT] Model failed...");
+```
+
+**After:**
+
+```javascript
+const logger = require("./utils/logger");
+logger.info(`🖥️  Primary ${process.pid} → spawning ${numCPUs} workers`);
+logger.error("❌ Admin seed error:", { message: err.message });
+logger.warn("[AI ALERT] Model failed...", { failureCount });
+```
+
+**Logger Features:**
+
+- **Environment-aware:** Colors in dev, plain text in production
+- **Timestamp included:** ISO format for all logs
+- **Structured data:** Context passed as objects (not string concatenation)
+- **Log levels:** `debug`, `info`, `warn`, `error`
+- **Request logging middleware:** Automatic HTTP request/response logging
+
+**Usage Examples:**
+
+```javascript
+// Basic logging
+logger.info("Server started");
+logger.error("Database connection failed", { code: "ECONNREFUSED" });
+
+// Debug (only in development)
+logger.debug("Processing complaint", { id: "12345" });
+
+// Middleware integration (automatically enabled)
+app.use(logger.requestLogger);
+```
+
+**Impact:**
+
+- Centralized logging for easier monitoring and debugging
+- Structured output enables log aggregation (JSON parsing)
+- Easier to integrate with error tracking services (Sentry, LogRocket)
+- Development logs are colored and readable; production logs are clean
+- Debugging middleware logs all requests in development mode
+
+**Files Modified:**
+
+- `backend/server.js` - Replaced 9 console calls
+- `backend/middleware/error.middleware.js` - Added structured error context
+- `backend/services/ai.service.js` - Replaced 5 console calls
+- `backend/services/automation.service.js` - Replaced 2 console calls
+- `backend/queues/ai.queue.js` - Replaced 4 console calls
+
+---
+
+## 7. ✅ Standardized API Response Format (Consistency & Frontend Integration)
+
+**File:** `backend/utils/apiResponse.js` (NEW)
+
+**Change:** Created utility for standardized response structure across all endpoints.
+
+**Before (Inconsistent responses):**
+
+```javascript
+// Some endpoints
+res.json({ success: true, data: complaints });
+
+// Other endpoints
+res.status(200).json({ message: "Success", complaints });
+
+// Error endpoints
+res.status(400).json({ error: "Invalid input" });
+```
+
+**After (Consistent structure):**
+
+```javascript
+const apiResponse = require("./utils/apiResponse");
+
+// Success
+res.json(apiResponse.success({ complaints }, "Complaints retrieved"));
+
+// Pagination
+res.json(
+  apiResponse.paginated(complaints, {
+    page: 1,
+    pages: 5,
+    total: 50,
+    count: 10,
+  }),
+);
+
+// Validation error
+res.status(400).json(
+  apiResponse.validationError({
+    email: "Invalid email format",
+    phone: "Phone must be 10 digits",
+  }),
+);
+
+// Error
+res.status(404).json(apiResponse.notFound("Complaint"));
+```
+
+**Standardized Response Structure:**
+
+```javascript
+// Success response
+{
+  success: true,
+  message: "Success message",
+  statusCode: 200,
+  data: { ... },
+  timestamp: "2026-05-20T10:30:00.000Z"
+}
+
+// Error response
+{
+  success: false,
+  message: "Error message",
+  statusCode: 400,
+  details: { ... }, // Optional
+  timestamp: "2026-05-20T10:30:00.000Z"
+}
+
+// Paginated response
+{
+  success: true,
+  message: "Success",
+  statusCode: 200,
+  data: [ ... ],
+  pagination: {
+    page: 1,
+    pages: 5,
+    total: 50,
+    count: 10
+  },
+  timestamp: "2026-05-20T10:30:00.000Z"
+}
+```
+
+**Available Helper Functions:**
+
+- `success(data, message, statusCode)` - Standard success response
+- `error(message, details, statusCode)` - Standard error response
+- `paginated(data, { page, pages, total, count, message })` - Paginated response
+- `validationError(errors)` - 400 validation error
+- `notFound(resource)` - 404 not found
+- `unauthorized(message)` - 401 unauthorized
+- `forbidden(message)` - 403 forbidden
+- `serverError(message)` - 500 server error
+
+**Impact:**
+
+- Frontend can rely on consistent response structure
+- Easier error handling in API clients
+- Timestamp helps with debugging and client-side caching
+- Statuscode included in response for redundancy
+- Ready for automated API documentation generation
+- Enables better error tracking and analytics
+
+**Recommended Next Steps:**
+
+- Gradually adopt in new endpoints
+- Refactor existing endpoints to use these helpers
+
+---
+
+## Summary of Recent Changes
+
+| Issue                   | Severity   | Fix                      | File(s)                        |
+| ----------------------- | ---------- | ------------------------ | ------------------------------ |
+| Scattered logging calls | **High**   | Structured logger module | `backend/utils/logger.js` + 5  |
+| Inconsistent responses  | **High**   | API response helpers     | `backend/utils/apiResponse.js` |
+| No request logging      | **Medium** | Logger middleware        | `backend/utils/logger.js`      |
+| Error tracking gap      | **Medium** | Logger ready for Sentry  | `backend/utils/logger.js`      |
+
+---
+
+## Testing Recommendations
+
+1. **Verify Structured Logging:**
+
+   ```bash
+   npm run dev-backend
+   # Watch for colored, timestamped logs in development
+   ```
+
+2. **Check Request Logging:**
+
+   ```bash
+   # Each HTTP request should log method, path, status, duration
+   curl http://localhost:5000/api/complaints?page=1
+   ```
+
+3. **Test Response Format:**
+
+   ```bash
+   # Success response
+   curl -s http://localhost:5000/ | jq
+
+   # Error response
+   curl -s -X POST http://localhost:5000/api/auth/login \
+     -H 'Content-Type: application/json' \
+     -d '{}' | jq
+   ```
+
+---
+
 ## Future Improvements
 
-- [ ] Integrate with error tracking service (Sentry, LogRocket)
+- [ ] Integrate with error tracking service (Sentry, LogRocket, etc.)
 - [ ] Add exponential backoff for failed Redis connections
 - [ ] Implement complaint update history/versioning
-- [ ] Add request logging middleware for debugging
+- [x] Add request logging middleware for debugging
+- [ ] Refactor all endpoints to use apiResponse helpers
 - [ ] Consider bulk operations for performance optimization
+- [ ] Add request tracing (correlation IDs) for distributed logging

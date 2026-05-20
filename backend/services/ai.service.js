@@ -1,12 +1,11 @@
 const axios = require("axios");
+const logger = require("../utils/logger");
 
 const HUGGINGFACE_API_URL = "https://router.huggingface.co/hf-inference/models";
 const API_KEY = process.env.HUGGINGFACE_API_KEY;
-const CATEGORY_MODEL =
-  process.env.HF_MODEL_CATEGORY || "facebook/bart-large-mnli";
+const CATEGORY_MODEL = process.env.HF_MODEL_CATEGORY || "facebook/bart-large-mnli";
 const SENTIMENT_MODEL =
-  process.env.HF_MODEL_SENTIMENT ||
-  "distilbert/distilbert-base-uncased-finetuned-sst-2-english";
+  process.env.HF_MODEL_SENTIMENT || "distilbert/distilbert-base-uncased-finetuned-sst-2-english";
 const RESPONSE_MODEL = process.env.HF_MODEL_RESPONSE || "google/flan-t5-small";
 
 // Timeout configuration (10 seconds for Hugging Face)
@@ -19,17 +18,13 @@ const failureTracker = {};
 const queryHuggingFace = async (model, data, retries = 2) => {
   for (let attempt = 1; attempt <= retries + 1; attempt++) {
     try {
-      const response = await axios.post(
-        `${HUGGINGFACE_API_URL}/${model}`,
-        data,
-        {
-          headers: {
-            Authorization: `Bearer ${API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          timeout: HF_TIMEOUT,
+      const response = await axios.post(`${HUGGINGFACE_API_URL}/${model}`, data, {
+        headers: {
+          Authorization: `Bearer ${API_KEY}`,
+          "Content-Type": "application/json",
         },
-      );
+        timeout: HF_TIMEOUT,
+      });
 
       // Reset failure count on success
       if (failureTracker[model]) {
@@ -44,17 +39,15 @@ const queryHuggingFace = async (model, data, retries = 2) => {
 
       // Log warning if too many failures
       if (failureCount >= 5) {
-        console.warn(
-          `[AI ALERT] Model ${model} failed ${failureCount} times. May need investigation.`,
+        logger.warn(
+          `[AI ALERT] Model ${model} failed ${failureCount} times. May need investigation.`
         );
       }
 
       const isLastAttempt = attempt === retries + 1;
       const errorMsg = error.response?.data?.error || error.message;
 
-      console.error(
-        `[Attempt ${attempt}/${retries + 1}] Hugging Face ${model} Error: ${errorMsg}`,
-      );
+      logger.error(`[Attempt ${attempt}/${retries + 1}] Hugging Face ${model} Error: ${errorMsg}`);
 
       // Retry with backoff if not last attempt
       if (
@@ -125,7 +118,7 @@ exports.categorizeComplaint = async (text) => {
       })),
     };
   } catch (error) {
-    console.error("Error in categorizeComplaint:", error.message);
+    logger.error("Error in categorizeComplaint:", { message: error.message });
     return {
       category: "other",
       confidence: 0,
@@ -161,7 +154,7 @@ exports.analyzeSentiment = async (text) => {
       confidence: score,
     };
   } catch (error) {
-    console.error("Error in analyzeSentiment:", error.message);
+    logger.error("Error in analyzeSentiment:", { message: error.message });
     return {
       sentiment: "neutral",
       confidence: 0,
@@ -216,7 +209,7 @@ exports.suggestPriority = async (text, sentiment) => {
 
     return { priority: "medium", confidence: 0.5 };
   } catch (error) {
-    console.error("Error in suggestPriority:", error.message);
+    logger.error("Error in suggestPriority:", { message: error.message });
     return { priority: "medium", confidence: 0 };
   }
 };
@@ -234,11 +227,7 @@ exports.generateSuggestedResponse = async (complaintText, category) => {
       },
     });
 
-    if (
-      !Array.isArray(result) ||
-      !result.length ||
-      !result[0]?.generated_text
-    ) {
+    if (!Array.isArray(result) || !result.length || !result[0]?.generated_text) {
       throw new Error("No generated text returned by model");
     }
 
@@ -246,7 +235,7 @@ exports.generateSuggestedResponse = async (complaintText, category) => {
       response: result[0].generated_text.replace(prompt, "").trim(),
     };
   } catch (error) {
-    console.error("Error in generateSuggestedResponse:", error.message);
+    logger.error("Error in generateSuggestedResponse:", { message: error.message });
     // Provide a generic fallback response
     return {
       response: `Thank you for bringing this ${category} issue to our attention. We are reviewing your complaint and will take appropriate action shortly. We apologize for any inconvenience caused.`,
@@ -274,15 +263,12 @@ exports.processComplaintWithAI = async (title, description) => {
     };
 
     // Get priority based on sentiment
-    const priorityResult = await exports.suggestPriority(
-      fullText,
-      sentimentResult.sentiment,
-    );
+    const priorityResult = await exports.suggestPriority(fullText, sentimentResult.sentiment);
 
     // Generate suggested response
     const responseResult = await exports.generateSuggestedResponse(
       fullText,
-      categoryResult.category,
+      categoryResult.category
     );
 
     return {
@@ -304,8 +290,7 @@ exports.processComplaintWithAI = async (title, description) => {
       category: "other",
       sentiment: "neutral",
       priority: "medium",
-      suggestedResponse:
-        "Thank you for your complaint. We are reviewing it and will respond soon.",
+      suggestedResponse: "Thank you for your complaint. We are reviewing it and will respond soon.",
       confidence: {
         category: 0,
         sentiment: 0,

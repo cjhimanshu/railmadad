@@ -9,6 +9,7 @@
 
 const { Queue, Worker } = require("bullmq");
 const IORedis = require("ioredis");
+const logger = require("../utils/logger");
 
 let aiQueue = null;
 let redisConnected = false;
@@ -22,10 +23,7 @@ const processAIJob = async (complaintId, title, description) => {
   const controlUnitService = require("../services/controlUnit.service");
 
   try {
-    const aiResults = await aiService.processComplaintWithAI(
-      title,
-      description || "",
-    );
+    const aiResults = await aiService.processComplaintWithAI(title, description || "");
 
     const complaint = await Complaint.findByIdAndUpdate(
       complaintId,
@@ -42,7 +40,7 @@ const processAIJob = async (complaintId, title, description) => {
           confidence: aiResults.confidence?.category || 0,
         },
       },
-      { new: true },
+      { new: true }
     );
 
     if (!complaint) return;
@@ -57,19 +55,21 @@ const processAIJob = async (complaintId, title, description) => {
       controlUnitService.queueForDispatch(complaint._id, complaint.priority);
     }
 
-    console.log(
-      `✅ [AI QUEUE] Complaint ${complaintId} processed — category:${aiResults.category} priority:${aiResults.priority}`,
-    );
+    logger.info(`[AI QUEUE] Complaint processed`, {
+      id: complaintId,
+      category: aiResults.category,
+      priority: aiResults.priority,
+    });
   } catch (err) {
-    console.error(`Failed to process complaint ${complaintId}:`, err.message);
+    logger.error(`Failed to process complaint`, { id: complaintId, error: err.message });
     // Re-throw so BullMQ can retry. Don't mark as processed on failure.
     // This ensures the complaint can be retried later by the automation service.
     if (redisConnected) {
       throw err; // Let BullMQ retry with exponential backoff
     } else {
       // In fallback mode (no Redis), log but don't mark as processed
-      console.warn(
-        `Complaint ${complaintId} AI processing failed. Will be retried by automation service.`,
+      logger.warn(
+        `Complaint ${complaintId} AI processing failed. Will be retried by automation service.`
       );
     }
   }
@@ -90,9 +90,9 @@ exports.initQueue = async () => {
     await connection.connect();
     redisConnected = true;
   } catch (err) {
-    console.warn(
+    logger.warn(
       "⚠️  [AI QUEUE] Redis unavailable — AI will process asynchronously in-process (setImmediate). " +
-        "Set REDIS_URL to enable full BullMQ queuing.",
+        "Set REDIS_URL to enable full BullMQ queuing."
     );
     if (connection) connection.disconnect();
     return;
@@ -114,12 +114,12 @@ exports.initQueue = async () => {
     {
       connection: workerConnection,
       concurrency: parseInt(process.env.AI_QUEUE_CONCURRENCY) || 20,
-    },
+    }
   );
 
-  console.log(
-    `✅ [AI QUEUE] Redis-backed queue ready (concurrency: ${process.env.AI_QUEUE_CONCURRENCY || 20})`,
-  );
+  logger.info(`[AI QUEUE] Redis-backed queue ready`, {
+    concurrency: process.env.AI_QUEUE_CONCURRENCY || 20,
+  });
 };
 
 // ── Enqueue a complaint for AI processing (called from complaint controller)
@@ -134,12 +134,14 @@ exports.enqueueAI = async (complaintId, title, description) => {
         backoff: { type: "exponential", delay: 2000 },
         removeOnComplete: { count: 1000 },
         removeOnFail: { count: 500 },
-      },
+      }
     );
   } else {
     // Fallback: run in next event-loop tick so HTTP response is sent first
     setImmediate(() =>
-      processAIJob(complaintId, title, description).catch(console.error),
+      processAIJob(complaintId, title, description).catch((err) =>
+        logger.error("Fallback AI processing error", { id: complaintId, error: err.message })
+      )
     );
   }
 };
