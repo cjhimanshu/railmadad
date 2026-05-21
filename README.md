@@ -1,42 +1,56 @@
 # RailMadad
 
-AI-assisted railway complaint management platform built with the MERN stack.
+AI-assisted railway complaint management platform (MERN).
 
-RailMadad helps passengers submit and track complaints and provides admins tools to triage, dispatch, and resolve issues faster.
+RailMadad helps passengers submit and track complaints while providing admins tools to triage, dispatch, and resolve issues faster. The codebase demonstrates API design, auth, background processing, file uploads, and AI-assisted automation.
 
-Live apps
+Live demo
 
 - RailMadad: https://railmadad-gamma.vercel.app/
-- Hotel Booking System: https://hotel-booking-system-eight-self.vercel.app/
 
 Highlights
 
 - Passenger complaint submission and public tracking
 - Admin dashboard with dispatch, analytics, and bulk actions
 - AI-assisted categorization, priority suggestion, sentiment analysis, and draft responses
-- Background jobs using BullMQ/Redis with graceful fallback
+- Background jobs using BullMQ/Redis
 
-Quick Links
+Quick links
 
-- Repo: https://github.com/cjhimanshu/railmadad
+- Repository: https://github.com/cjhimanshu/railmadad
 
 Table of contents
 
-- What is this
+- Project
+- Features
 - Quick start (dev)
 - Docker
-- Environment variables
+- Environment
 - Scripts
 - Testing
+- Project structure
 - Contributing
 
-What is this
+Project
 
-RailMadad is a focused helpdesk for railway passengers to report issues, track progress, and receive resolution confirmations. The project demonstrates full-stack patterns (API, auth, background jobs, file uploads, and realtime-ish UX) and includes AI-assisted automation for triage and response drafts.
+RailMadad is a focused helpdesk for railway passengers to report issues, track progress, and receive resolution confirmations. It's a practical example of a production-oriented MERN app with optional AI integrations.
+
+Features
+
+- Complaint submission with attachments
+- Public tracking page for complaints
+- Admin panel with dispatch and analytics
+- Background workers for automation and AI tasks
 
 Quick start (development)
 
-1. Clone and install
+Prerequisites
+
+- Node.js (16+ recommended) and npm
+- Git
+- Optional: Docker & Docker Compose (for local dependent services)
+
+Clone and install
 
 ```bash
 git clone https://github.com/cjhimanshu/railmadad.git
@@ -44,16 +58,16 @@ cd railmadad
 npm run install-all
 ```
 
-2. Copy environment files
+Environment files
 
-```bash
-copy backend\.env.example backend\.env
-copy frontend\.env.example frontend\.env
-```
+Copy the example env files and set values for secrets and service URLs:
 
-Edit the created `.env` files (backend/.env and frontend/.env) and provide the required secrets (see section below).
+- [backend/.env.example](backend/.env.example) → `backend/.env`
+- [frontend/.env.example](frontend/.env.example) → `frontend/.env`
 
-3. Run development servers
+At minimum configure `MONGODB_URI`, `JWT_SECRET`, and Cloudinary keys if you plan to upload files. For AI features provide `HUGGINGFACE_API_KEY` or other model keys.
+
+Run locally
 
 In one terminal (backend):
 
@@ -67,46 +81,40 @@ In another terminal (frontend):
 npm run dev-frontend
 ```
 
-Default local URLs
+Defaults
 
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:5000
 
 Docker (local / CI)
 
-There is a `docker-compose.yml` at the repo root for spinning up the app and recommended services (MongoDB, Redis).
-
-Build and run with Docker Compose:
+Spin up the app and recommended services (MongoDB, Redis) using Docker Compose from the repo root:
 
 ```bash
 docker-compose up --build
 ```
 
-Or build just the backend image and run it:
+Or build and run only the backend image:
 
 ```bash
 docker build -f backend/Dockerfile -t railmadad-backend ./backend
 docker run --env-file backend/.env -p 5000:5000 railmadad-backend
 ```
 
-Environment variables
+Environment (key vars)
 
-Copy the example env files in `backend/.env.example` and `frontend/.env.example` and fill in secrets. Required backend variables include:
+Required (examples)
 
-- `PORT`, `NODE_ENV`
-- `MONGODB_URI` or `MONGO_URI`
-- `JWT_SECRET`, `JWT_EXPIRE`
-- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
-- `HUGGINGFACE_API_KEY` (for AI features)
-- `FRONTEND_URL`
+- `PORT` — backend port
+- `MONGODB_URI` — MongoDB connection string
+- `JWT_SECRET`, `JWT_EXPIRE` — JWT auth
+- `CLOUDINARY_*` — Cloudinary upload credentials (optional)
+- `HUGGINGFACE_API_KEY` — AI integrations (optional)
 
-Optional but useful in production
+Recommended for production
 
-- `REDIS_URL` (recommended for BullMQ)
-- `RESEND_API_KEY`, `RESEND_FROM_EMAIL`
-- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
-
-If you change AI model configuration, update `HF_MODEL_RESPONSE` and related vars in `backend/.env`.
+- `REDIS_URL` — Redis for BullMQ workers
+- `RESEND_API_KEY` / `TWILIO_*` — email/SMS providers
 
 Scripts
 
@@ -116,7 +124,7 @@ Scripts
 
 Testing
 
-Backend tests use Node's test runner. Run them from the backend folder:
+Backend tests live in the `backend` folder. Run:
 
 ```bash
 cd backend
@@ -135,14 +143,13 @@ railmadad/
 
 Contributing
 
-1. Fork the repository and create a feature branch.
-2. Add clear, focused commits and tests for logic changes.
-3. Run backend tests (`cd backend && npm test`) before opening a PR.
+1. Fork the repo and create a branch for your change.
+2. Add focused commits and tests for logic changes.
+3. Run `cd backend && npm test` before opening a PR.
 
 Operational notes
 
-- Production should run with `REDIS_URL` and worker processes for BullMQ to scale AI/background jobs.
-- Automation tasks (cron) and control-unit schedulers are orchestrated and may be restricted to a single worker in production.
+- Use `REDIS_URL` with a worker process in production to run BullMQ jobs and AI/background tasks reliably.
 
 License
 
