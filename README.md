@@ -143,6 +143,8 @@ railmadad/
 
 Contributing
 
+See CONTRIBUTING.md for developer setup and PR guidelines.
+
 1. Fork the repo and create a branch for your change.
 2. Add focused commits and tests for logic changes.
 3. Run `cd backend && npm test` before opening a PR.
