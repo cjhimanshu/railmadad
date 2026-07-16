@@ -103,7 +103,7 @@ Before deploying to production, set these secrets in your deployment platform:
 
 **Frontend:**
 
-- `VITE_API_URL` — production API endpoint (e.g., https://api.yourdomain.com)
+- `VITE_API_URL` — build-time override only; the default frontend build uses same-origin `/api`
 
 ### Docker Registry
 
@@ -170,3 +170,5 @@ docker ps
 ## CI/CD Integration
 
 GitHub Actions will automatically build and push Docker images on successful tests. See `.github/workflows/ci.yml` for details.
+
+When the frontend container runs alongside the backend in `docker-compose.yml`, Nginx proxies `/api/*` requests to the backend service. If you deploy the frontend separately, provide `VITE_API_URL` at build time for the alternate API origin.

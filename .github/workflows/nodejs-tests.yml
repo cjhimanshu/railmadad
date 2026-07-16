@@ -2,9 +2,9 @@ name: Node.js CI - Backend Tests
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
 
 jobs:
   backend-tests:
@@ -24,20 +24,14 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
+          node-version: "18"
+          cache: "npm"
 
       - name: Install root dependencies
         run: npm ci
 
       - name: Install backend dependencies
         run: npm run install-backend
-
-      - name: Wait for MongoDB
-        run: |
-          for i in {1..30}; do
-            mongosh --eval "db.adminCommand({ ping: 1 })" && break || sleep 1
-          done
 
       - name: Run backend tests
         run: npm run test-backend

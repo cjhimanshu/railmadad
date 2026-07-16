@@ -1,11 +1,24 @@
 // Load environment variables from .env file
 require("dotenv").config();
 
-// ── Clustering: one worker per CPU in production ──────────────────────────────
-// This allows the server to use all CPU cores in production for better performance.
+// Import core dependencies
+const express = require("express");
+const cors = require("cors");
+const morgan = require("morgan");
+const compression = require("compression");
+const rateLimit = require("express-rate-limit");
+const bcrypt = require("bcryptjs");
 const cluster = require("cluster");
 const os = require("os");
+const logger = require("./utils/logger");
+const connectDB = require("./config/db.config");
+const errorHandler = require("./middleware/error.middleware");
+const { startAutomation } = require("./services/automation.service");
+const { startControlUnit } = require("./services/controlUnit.service");
+const { initQueue } = require("./queues/ai.queue");
 
+// ── Clustering: one worker per CPU in production ──────────────────────────────
+// This allows the server to use all CPU cores in production for better performance.
 if (process.env.NODE_ENV === "production" && cluster.isPrimary) {
   const numCPUs = parseInt(process.env.WEB_CONCURRENCY) || os.cpus().length;
   logger.info(`🖥️  Primary ${process.pid} → spawning ${numCPUs} workers`);
@@ -14,23 +27,7 @@ if (process.env.NODE_ENV === "production" && cluster.isPrimary) {
     logger.warn(`⚠️  Worker ${worker.process.pid} died (${signal || code}) — restarting`);
     cluster.fork();
   });
-} else {
-  // Workers run the actual server
 }
-
-// Import core dependencies
-const express = require("express");
-const cors = require("cors");
-const morgan = require("morgan");
-const compression = require("compression");
-const rateLimit = require("express-rate-limit");
-const bcrypt = require("bcryptjs");
-const connectDB = require("./config/db.config");
-const errorHandler = require("./middleware/error.middleware");
-const { startAutomation } = require("./services/automation.service");
-const { startControlUnit } = require("./services/controlUnit.service");
-const { initQueue } = require("./queues/ai.queue");
-const logger = require("./utils/logger");
 
 // Seed the fixed admin account on startup
 // Ensures there is always an admin user with credentials from .env
@@ -82,23 +79,6 @@ const adminRoutes = require("./routes/admin.routes");
 
 // Initialize Express app
 const app = express();
-
-// Trust Render's proxy (required for express-rate-limit behind a reverse proxy)
-app.set("trust proxy", 1);
-
-// Connect to MongoDB database
-connectDB().then(async () => {
-  // Seed fixed admin account
-  await seedAdmin();
-  // Start automation engine & control unit only on worker 1 (or in dev)
-  // This prevents N workers from each running cron jobs
-  if (!cluster.isWorker || cluster.worker.id === 1) {
-    startAutomation();
-    await startControlUnit();
-  }
-  // Initialise AI processing queue (connects to Redis if available)
-  await initQueue();
-});
 
 // Middleware
 app.use(compression()); // gzip all responses
@@ -178,27 +158,52 @@ app.use("/api/admin", adminRoutes);
 // Error handler (must be last)
 app.use(errorHandler);
 
-// Start server
-const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-  logger.info(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-});
+async function startServer() {
+  // Trust Render's proxy (required for express-rate-limit behind a reverse proxy)
+  app.set("trust proxy", 1);
 
-// Handle server errors (e.g., port in use)
-server.on("error", (err) => {
-  if (err.code === "EADDRINUSE") {
-    logger.error(`❌ Port ${PORT} is already in use. Trying port ${parseInt(PORT) + 1}...`);
-    server.close();
-    app.listen(parseInt(PORT) + 1, () => {
-      logger.info(
-        `🚀 Server running in ${process.env.NODE_ENV} mode on port ${parseInt(PORT) + 1}`
-      );
-    });
-  } else {
-    logger.error("Server error:", { error: err.message });
-    process.exit(1);
+  await connectDB();
+  await seedAdmin();
+
+  // Start automation engine & control unit only on worker 1 (or in dev)
+  // This prevents N workers from each running cron jobs
+  if (!cluster.isWorker || cluster.worker.id === 1) {
+    startAutomation();
+    await startControlUnit();
   }
-});
+
+  // Initialise AI processing queue (connects to Redis if available)
+  await initQueue();
+
+  // Start server
+  const PORT = process.env.PORT || 5000;
+  const server = app.listen(PORT, () => {
+    logger.info(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  });
+
+  // Handle server errors (e.g., port in use)
+  server.on("error", (err) => {
+    if (err.code === "EADDRINUSE") {
+      logger.error(`❌ Port ${PORT} is already in use. Trying port ${parseInt(PORT) + 1}...`);
+      server.close();
+      app.listen(parseInt(PORT) + 1, () => {
+        logger.info(
+          `🚀 Server running in ${process.env.NODE_ENV} mode on port ${parseInt(PORT) + 1}`
+        );
+      });
+    } else {
+      logger.error("Server error:", { error: err.message });
+      process.exit(1);
+    }
+  });
+}
+
+if (process.env.NODE_ENV !== "production" || cluster.isWorker) {
+  startServer().catch((err) => {
+    logger.error("❌ Failed to start server", { message: err.message, stack: err.stack });
+    process.exit(1);
+  });
+}
 
 // ── Process-level error handlers ─────────────────────────────────────────────────
 // Prevent silent crashes in production from unhandled rejections or exceptions
