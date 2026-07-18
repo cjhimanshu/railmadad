@@ -2,12 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import api from "../utils/api";
-import {
-  FaTrain,
-  FaEnvelope,
-  FaArrowLeft,
-  FaCheckCircle,
-} from "react-icons/fa";
+import { FaTrain, FaEnvelope, FaArrowLeft, FaCheckCircle } from "react-icons/fa";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -21,9 +16,7 @@ const ForgotPassword = () => {
       await api.post("/auth/forgot-password", { email });
       setSent(true);
     } catch (error) {
-      const msg =
-        error.response?.data?.message ||
-        "Something went wrong. Please try again.";
+      const msg = error.response?.data?.message || "Something went wrong. Please try again.";
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -53,17 +46,15 @@ const ForgotPassword = () => {
                   <FaCheckCircle className="text-4xl text-green-500" />
                 </div>
               </div>
-              <h2 className="text-xl font-bold text-railway-dark mb-2">
-                Check your inbox
-              </h2>
+              <h2 className="text-xl font-bold text-railway-dark mb-2">Check your inbox</h2>
               <p className="text-gray-600 mb-1">
                 If an account exists for{" "}
-                <span className="font-semibold text-railway-blue">{email}</span>
-                , you will receive a password reset link shortly.
+                <span className="font-semibold text-railway-blue">{email}</span>, you will receive a
+                password reset link shortly.
               </p>
               <p className="text-sm text-gray-500 mb-6">
-                The link expires in <strong>10 minutes</strong>. Check your spam
-                folder if you don't see it.
+                The link expires in <strong>10 minutes</strong>. Check your spam folder if you
+                don&apos;t see it.
               </p>
               <Link
                 to="/login"
@@ -76,12 +67,10 @@ const ForgotPassword = () => {
           ) : (
             /* ── Form State ── */
             <>
-              <h2 className="text-2xl font-bold text-railway-dark mb-2">
-                Forgot Password?
-              </h2>
+              <h2 className="text-2xl font-bold text-railway-dark mb-2">Forgot Password?</h2>
               <p className="text-gray-600 mb-6 text-sm">
-                Enter your registered email address and we'll send you a link to
-                reset your password.
+                Enter your registered email address and we&apos;ll send you a link to reset your
+                password.
               </p>
 
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -102,11 +91,7 @@ const ForgotPassword = () => {
                   </div>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="btn-primary w-full"
-                >
+                <button type="submit" disabled={loading} className="btn-primary w-full">
                   {loading ? "Sending reset link..." : "Send Reset Link"}
                 </button>
               </form>

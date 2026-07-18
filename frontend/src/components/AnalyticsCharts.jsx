@@ -11,19 +11,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
-  Legend,
 } from "recharts";
-import {
-  FaChartPie,
-  FaExclamationTriangle,
-  FaUsers,
-  FaClock,
-  FaSmile,
-  FaMeh,
-  FaFrown,
-  FaFire,
-  FaArrowUp,
-} from "react-icons/fa";
+import { FaChartPie, FaUsers, FaClock, FaSmile, FaMeh, FaFrown, FaArrowUp } from "react-icons/fa";
 
 // ─── Design tokens ─────────────────────────────────────────────────────────────
 const STATUS_COLORS = {
@@ -83,12 +72,8 @@ const DonutChart = ({ data, total, label }) => (
     {/* centre label — CSS overlay */}
     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
       <div className="text-center">
-        <p className="text-2xl font-extrabold text-slate-800 leading-none">
-          {total}
-        </p>
-        <p className="text-[10px] uppercase tracking-widest text-slate-400 mt-1">
-          {label}
-        </p>
+        <p className="text-2xl font-extrabold text-slate-800 leading-none">{total}</p>
+        <p className="text-[10px] uppercase tracking-widest text-slate-400 mt-1">{label}</p>
       </div>
     </div>
   </div>
@@ -108,16 +93,9 @@ const CustomTooltip = ({ active, payload, label }) => {
         boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
       }}
     >
-      {label && (
-        <p style={{ color: "#94A3B8", fontSize: 11, marginBottom: 4 }}>
-          {label}
-        </p>
-      )}
+      {label && <p style={{ color: "#94A3B8", fontSize: 11, marginBottom: 4 }}>{label}</p>}
       {payload.map((p, i) => (
-        <p
-          key={i}
-          style={{ color: p.color || "#fff", fontWeight: 700, fontSize: 14 }}
-        >
+        <p key={i} style={{ color: p.color || "#fff", fontWeight: 700, fontSize: 14 }}>
           {p.name}: <span style={{ color: "#fff" }}>{p.value}</span>
         </p>
       ))}
@@ -135,11 +113,7 @@ const GlassPanel = ({ children, className = "" }) => (
 );
 
 // ─── Panel header ───────────────────────────────────────────────────────────────
-const PanelHeader = ({
-  title,
-  subtitle,
-  accent = "from-blue-600 to-indigo-600",
-}) => (
+const PanelHeader = ({ title, subtitle, accent = "from-blue-600 to-indigo-600" }) => (
   <div className="flex items-center gap-3 mb-5 pb-4 border-b border-gray-100">
     <div className={`w-1 h-8 rounded-full bg-gradient-to-b ${accent}`} />
     <div>
@@ -153,13 +127,8 @@ const PanelHeader = ({
 const LegendPill = ({ color, label, value }) => (
   <div className="flex items-center justify-between gap-4 py-1.5">
     <div className="flex items-center gap-2">
-      <span
-        className="w-3 h-3 rounded-full flex-shrink-0"
-        style={{ background: color }}
-      />
-      <span className="text-sm text-slate-600 capitalize">
-        {label.replace(/_/g, " ")}
-      </span>
+      <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: color }} />
+      <span className="text-sm text-slate-600 capitalize">{label.replace(/_/g, " ")}</span>
     </div>
     <span className="text-sm font-bold text-slate-800">{value}</span>
   </div>
@@ -178,15 +147,17 @@ const AnalyticsCharts = ({ analytics }) => {
     );
   }
 
-  const statusData = Object.entries(analytics.complaintsByStatus || {}).map(
-    ([k, v]) => ({ name: k, value: v, color: STATUS_COLORS[k] || "#94A3B8" }),
-  );
-  const priorityData = Object.entries(analytics.complaintsByPriority || {}).map(
-    ([k, v]) => ({ name: k, value: v, color: PRIORITY_COLORS[k] || "#94A3B8" }),
-  );
-  const sentimentData = Object.entries(
-    analytics.complaintsBySentiment || {},
-  ).map(([k, v]) => ({
+  const statusData = Object.entries(analytics.complaintsByStatus || {}).map(([k, v]) => ({
+    name: k,
+    value: v,
+    color: STATUS_COLORS[k] || "#94A3B8",
+  }));
+  const priorityData = Object.entries(analytics.complaintsByPriority || {}).map(([k, v]) => ({
+    name: k,
+    value: v,
+    color: PRIORITY_COLORS[k] || "#94A3B8",
+  }));
+  const sentimentData = Object.entries(analytics.complaintsBySentiment || {}).map(([k, v]) => ({
     name: k,
     value: v,
     color: SENTIMENT_COLORS[k] || "#94A3B8",
@@ -257,17 +228,13 @@ const AnalyticsCharts = ({ analytics }) => {
               className="relative overflow-hidden rounded-2xl bg-white border border-gray-100 shadow-md p-5 group hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
             >
               {/* gradient accent strip */}
-              <div
-                className={`absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r ${k.grad}`}
-              />
+              <div className={`absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r ${k.grad}`} />
               <div className="flex items-start justify-between mb-3">
                 <div className={`p-2.5 rounded-xl ${k.light}`}>
                   <Icon className="text-lg" />
                 </div>
               </div>
-              <p className="text-3xl font-extrabold text-slate-800 leading-none mb-1">
-                {k.value}
-              </p>
+              <p className="text-3xl font-extrabold text-slate-800 leading-none mb-1">{k.value}</p>
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                 {k.label}
               </p>
@@ -285,10 +252,7 @@ const AnalyticsCharts = ({ analytics }) => {
           accent="from-blue-500 to-cyan-500"
         />
         <ResponsiveContainer width="100%" height={220}>
-          <AreaChart
-            data={trendData}
-            margin={{ top: 4, right: 8, left: -16, bottom: 0 }}
-          >
+          <AreaChart data={trendData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
             <defs>
               <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.25} />
@@ -302,11 +266,7 @@ const AnalyticsCharts = ({ analytics }) => {
               tickLine={false}
               axisLine={false}
             />
-            <YAxis
-              tick={{ fontSize: 11, fill: "#94A3B8" }}
-              tickLine={false}
-              axisLine={false}
-            />
+            <YAxis tick={{ fontSize: 11, fill: "#94A3B8" }} tickLine={false} axisLine={false} />
             <Tooltip content={<CustomTooltip />} />
             <Area
               type="monotone"
@@ -331,19 +291,11 @@ const AnalyticsCharts = ({ analytics }) => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Status donut */}
         <GlassPanel className="p-6">
-          <PanelHeader
-            title="By Status"
-            accent="from-amber-500 to-orange-500"
-          />
+          <PanelHeader title="By Status" accent="from-amber-500 to-orange-500" />
           <DonutChart data={statusData} total={totalStatus} label="total" />
           <div className="mt-2 divide-y divide-gray-50">
             {statusData.map((d) => (
-              <LegendPill
-                key={d.name}
-                color={d.color}
-                label={d.name}
-                value={d.value}
-              />
+              <LegendPill key={d.name} color={d.color} label={d.name} value={d.value} />
             ))}
           </div>
         </GlassPanel>
@@ -354,22 +306,14 @@ const AnalyticsCharts = ({ analytics }) => {
           <DonutChart data={priorityData} total={totalPriority} label="total" />
           <div className="mt-2 divide-y divide-gray-50">
             {priorityData.map((d) => (
-              <LegendPill
-                key={d.name}
-                color={d.color}
-                label={d.name}
-                value={d.value}
-              />
+              <LegendPill key={d.name} color={d.color} label={d.name} value={d.value} />
             ))}
           </div>
         </GlassPanel>
 
         {/* Sentiment donut */}
         <GlassPanel className="p-6">
-          <PanelHeader
-            title="Sentiment"
-            accent="from-emerald-500 to-teal-500"
-          />
+          <PanelHeader title="Sentiment" accent="from-emerald-500 to-teal-500" />
           <DonutChart
             data={sentimentData}
             total={sentimentData.reduce((s, d) => s + d.value, 0)}
@@ -378,25 +322,14 @@ const AnalyticsCharts = ({ analytics }) => {
           <div className="mt-2 divide-y divide-gray-50">
             {sentimentData.map((d) => {
               const Icon =
-                d.name === "positive"
-                  ? FaSmile
-                  : d.name === "negative"
-                    ? FaFrown
-                    : FaMeh;
+                d.name === "positive" ? FaSmile : d.name === "negative" ? FaFrown : FaMeh;
               return (
-                <div
-                  key={d.name}
-                  className="flex items-center justify-between py-1.5"
-                >
+                <div key={d.name} className="flex items-center justify-between py-1.5">
                   <div className="flex items-center gap-2">
                     <Icon style={{ color: d.color }} />
-                    <span className="text-sm text-slate-600 capitalize">
-                      {d.name}
-                    </span>
+                    <span className="text-sm text-slate-600 capitalize">{d.name}</span>
                   </div>
-                  <span className="text-sm font-bold text-slate-800">
-                    {d.value}
-                  </span>
+                  <span className="text-sm font-bold text-slate-800">{d.value}</span>
                 </div>
               );
             })}
@@ -411,10 +344,7 @@ const AnalyticsCharts = ({ analytics }) => {
           subtitle="Sorted by volume"
           accent="from-violet-500 to-purple-600"
         />
-        <ResponsiveContainer
-          width="100%"
-          height={Math.max(280, categoryData.length * 34)}
-        >
+        <ResponsiveContainer width="100%" height={Math.max(280, categoryData.length * 34)}>
           <BarChart
             data={categoryData}
             layout="vertical"
@@ -422,24 +352,13 @@ const AnalyticsCharts = ({ analytics }) => {
           >
             <defs>
               {categoryData.map((d, i) => (
-                <linearGradient
-                  key={i}
-                  id={`catGrad${i}`}
-                  x1="0"
-                  y1="0"
-                  x2="1"
-                  y2="0"
-                >
+                <linearGradient key={i} id={`catGrad${i}`} x1="0" y1="0" x2="1" y2="0">
                   <stop offset="0%" stopColor={d.fill} stopOpacity={0.85} />
                   <stop offset="100%" stopColor={d.fill} stopOpacity={0.5} />
                 </linearGradient>
               ))}
             </defs>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              horizontal={false}
-              stroke="#F1F5F9"
-            />
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
             <XAxis
               type="number"
               tick={{ fontSize: 11, fill: "#94A3B8" }}
@@ -454,16 +373,8 @@ const AnalyticsCharts = ({ analytics }) => {
               tickLine={false}
               axisLine={false}
             />
-            <Tooltip
-              content={<CustomTooltip />}
-              cursor={{ fill: "rgba(148,163,184,0.08)" }}
-            />
-            <Bar
-              dataKey="count"
-              name="Complaints"
-              radius={[0, 6, 6, 0]}
-              barSize={18}
-            >
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(148,163,184,0.08)" }} />
+            <Bar dataKey="count" name="Complaints" radius={[0, 6, 6, 0]} barSize={18}>
               {categoryData.map((d, i) => (
                 <Cell key={i} fill={`url(#catGrad${i})`} />
               ))}

@@ -25,22 +25,6 @@ import Navbar from "../components/Navbar";
 import { useAuth } from "../context/AuthContext";
 import api from "../utils/api";
 
-const defaultProfileForm = {
-  name: "",
-  phone: "",
-  gender: "",
-  dateOfBirth: "",
-  occupation: "",
-  preferredLanguage: "",
-  nationality: "",
-  addressLine1: "",
-  addressLine2: "",
-  city: "",
-  district: "",
-  state: "",
-  pincode: "",
-};
-
 const genderOptions = [
   { value: "", label: "Select gender" },
   { value: "male", label: "Male" },
@@ -54,9 +38,7 @@ const buildProfileForm = (profile) => ({
   name: profile?.name || "",
   phone: profile?.phone || "",
   gender: profile?.gender || "",
-  dateOfBirth: profile?.dateOfBirth
-    ? new Date(profile.dateOfBirth).toISOString().slice(0, 10)
-    : "",
+  dateOfBirth: profile?.dateOfBirth ? new Date(profile.dateOfBirth).toISOString().slice(0, 10) : "",
   occupation: profile?.occupation || "",
   preferredLanguage: profile?.preferredLanguage || "",
   nationality: profile?.nationality || "",
@@ -116,16 +98,36 @@ const profileFieldGroups = [
   {
     title: "Demographics",
     fields: [
-      { key: "occupation", label: "Occupation", type: "text", placeholder: "Student, Engineer, Retired, etc." },
-      { key: "preferredLanguage", label: "Preferred Language", type: "text", placeholder: "Hindi, English, Bengali, etc." },
+      {
+        key: "occupation",
+        label: "Occupation",
+        type: "text",
+        placeholder: "Student, Engineer, Retired, etc.",
+      },
+      {
+        key: "preferredLanguage",
+        label: "Preferred Language",
+        type: "text",
+        placeholder: "Hindi, English, Bengali, etc.",
+      },
       { key: "nationality", label: "Nationality", type: "text", placeholder: "Indian" },
     ],
   },
   {
     title: "Address",
     fields: [
-      { key: "addressLine1", label: "Address Line 1", type: "text", placeholder: "House number, street, locality" },
-      { key: "addressLine2", label: "Address Line 2", type: "text", placeholder: "Landmark, apartment, area (optional)" },
+      {
+        key: "addressLine1",
+        label: "Address Line 1",
+        type: "text",
+        placeholder: "House number, street, locality",
+      },
+      {
+        key: "addressLine2",
+        label: "Address Line 2",
+        type: "text",
+        placeholder: "Landmark, apartment, area (optional)",
+      },
       { key: "city", label: "City", type: "text", placeholder: "Enter city" },
       { key: "district", label: "District", type: "text", placeholder: "Enter district" },
       { key: "state", label: "State", type: "text", placeholder: "Enter state" },
@@ -223,8 +225,7 @@ const UserDashboard = () => {
       updateUser(updatedProfile);
       toast.success("Profile updated successfully!");
     } catch (error) {
-      const message =
-        error.response?.data?.message || "Could not save your profile";
+      const message = error.response?.data?.message || "Could not save your profile";
       toast.error(message);
     } finally {
       setProfileSaving(false);
@@ -242,12 +243,8 @@ const UserDashboard = () => {
     profile?.demographicsSummary?.location ||
     [profile?.city, profile?.district, profile?.state].filter(Boolean).join(", ");
   const pendingCount = complaints.filter((item) => item.status === "pending").length;
-  const inProgressCount = complaints.filter(
-    (item) => item.status === "in_progress",
-  ).length;
-  const resolvedCount = complaints.filter(
-    (item) => item.status === "resolved",
-  ).length;
+  const inProgressCount = complaints.filter((item) => item.status === "in_progress").length;
+  const resolvedCount = complaints.filter((item) => item.status === "resolved").length;
 
   const profileSuggestions =
     completion.missingFields.length > 0
@@ -331,8 +328,8 @@ const UserDashboard = () => {
                 Complaint tracking and profile in one place
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-6 text-blue-100 md:text-base">
-                Keep your demographic details complete, file complaints faster,
-                and monitor every railway issue without losing your history.
+                Keep your demographic details complete, file complaints faster, and monitor every
+                railway issue without losing your history.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
@@ -357,12 +354,8 @@ const UserDashboard = () => {
             <div className="rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-xl">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-semibold text-orange-100">
-                    Profile completion
-                  </p>
-                  <p className="mt-2 text-4xl font-black">
-                    {completion.percentage}%
-                  </p>
+                  <p className="text-sm font-semibold text-orange-100">Profile completion</p>
+                  <p className="mt-2 text-4xl font-black">{completion.percentage}%</p>
                 </div>
                 <div className="rounded-2xl bg-white/15 p-3">
                   <FaUserCircle className="text-2xl text-white" />
@@ -378,20 +371,16 @@ const UserDashboard = () => {
 
               <div className="mt-4 flex items-center justify-between text-sm text-blue-50">
                 <span>
-                  {completion.completedFields} of {completion.totalFields} profile
-                  fields completed
+                  {completion.completedFields} of {completion.totalFields} profile fields completed
                 </span>
-                <span className="font-semibold">
-                  {completion.missingFields.length} left
-                </span>
+                <span className="font-semibold">{completion.missingFields.length} left</span>
               </div>
 
               <div className="mt-5 rounded-2xl bg-white/10 p-4 text-sm text-blue-50">
                 <p className="font-semibold text-white">Why this matters</p>
                 <p className="mt-2 leading-6">
-                  A complete profile helps show the right demographic context,
-                  improves future complaint filing, and keeps your contact
-                  details ready for follow-up.
+                  A complete profile helps show the right demographic context, improves future
+                  complaint filing, and keeps your contact details ready for follow-up.
                 </p>
               </div>
             </div>
@@ -434,12 +423,8 @@ const UserDashboard = () => {
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-slate-500">
-                      {item.label}
-                    </p>
-                    <p className="mt-2 text-3xl font-black text-slate-900">
-                      {item.value}
-                    </p>
+                    <p className="text-sm font-semibold text-slate-500">{item.label}</p>
+                    <p className="mt-2 text-3xl font-black text-slate-900">{item.value}</p>
                   </div>
                   <div className="rounded-2xl bg-white p-3 shadow-sm">
                     <Icon className={`text-xl ${item.tone.split(" ").pop()}`} />
@@ -469,12 +454,10 @@ const UserDashboard = () => {
             <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-blue-800">
-                    Profile progress
-                  </p>
+                  <p className="text-sm font-semibold text-blue-800">Profile progress</p>
                   <p className="text-sm text-blue-700">
-                    Fill in every demographic field so your profile is complete
-                    and visible in one place.
+                    Fill in every demographic field so your profile is complete and visible in one
+                    place.
                   </p>
                 </div>
                 <div className="text-sm font-semibold text-blue-700">
@@ -525,8 +508,7 @@ const UserDashboard = () => {
                   <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
                     <FaCheckCircle />
                     <span>
-                      {completion.completedFields} fields completed out of{" "}
-                      {completion.totalFields}
+                      {completion.completedFields} fields completed out of {completion.totalFields}
                     </span>
                   </div>
                 </div>
@@ -547,8 +529,7 @@ const UserDashboard = () => {
                       <div
                         key={field.key}
                         className={
-                          field.key === "addressLine1" ||
-                          field.key === "addressLine2"
+                          field.key === "addressLine1" || field.key === "addressLine2"
                             ? "md:col-span-2"
                             : ""
                         }
@@ -560,9 +541,7 @@ const UserDashboard = () => {
                         {field.type === "select" ? (
                           <select
                             value={profileForm[field.key]}
-                            onChange={(event) =>
-                              handleProfileChange(field.key, event.target.value)
-                            }
+                            onChange={(event) => handleProfileChange(field.key, event.target.value)}
                             className="input-field bg-white"
                           >
                             {genderOptions.map((option) => (
@@ -575,9 +554,7 @@ const UserDashboard = () => {
                           <input
                             type={field.type}
                             value={profileForm[field.key]}
-                            onChange={(event) =>
-                              handleProfileChange(field.key, event.target.value)
-                            }
+                            onChange={(event) => handleProfileChange(field.key, event.target.value)}
                             className="input-field bg-white"
                             placeholder={field.placeholder}
                           />
@@ -642,9 +619,7 @@ const UserDashboard = () => {
                         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
                           {item.label}
                         </p>
-                        <p className="mt-1 text-sm font-semibold text-slate-700">
-                          {item.value}
-                        </p>
+                        <p className="mt-1 text-sm font-semibold text-slate-700">{item.value}</p>
                       </div>
                     </div>
                   );
@@ -657,9 +632,8 @@ const UserDashboard = () => {
                 </p>
                 <p className="mt-2">
                   <strong>Address:</strong>{" "}
-                  {[profile?.addressLine1, profile?.addressLine2]
-                    .filter(Boolean)
-                    .join(", ") || "Add your full address"}
+                  {[profile?.addressLine1, profile?.addressLine2].filter(Boolean).join(", ") ||
+                    "Add your full address"}
                 </p>
               </div>
             </div>
@@ -696,9 +670,8 @@ const UserDashboard = () => {
                   Profile readiness tip
                 </div>
                 <p className="mt-2 leading-6">
-                  Keep your phone, location, and language updated. Those three
-                  details help the team contact you faster and understand your
-                  situation more clearly.
+                  Keep your phone, location, and language updated. Those three details help the team
+                  contact you faster and understand your situation more clearly.
                 </p>
               </div>
             </div>
@@ -726,10 +699,7 @@ const UserDashboard = () => {
             </div>
           </div>
 
-          <ComplaintList
-            complaints={complaints}
-            onUpdate={() => loadDashboard(true)}
-          />
+          <ComplaintList complaints={complaints} onUpdate={() => loadDashboard(true)} />
         </section>
       </div>
 

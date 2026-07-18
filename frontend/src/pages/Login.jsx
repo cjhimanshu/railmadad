@@ -3,14 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 import api from "../utils/api";
 import { useAuth } from "../context/AuthContext";
-import {
-  FaTrain,
-  FaEnvelope,
-  FaLock,
-  FaShieldAlt,
-  FaFileAlt,
-  FaArrowRight,
-} from "react-icons/fa";
+import { FaTrain, FaEnvelope, FaLock, FaShieldAlt, FaFileAlt, FaArrowRight } from "react-icons/fa";
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -48,10 +41,7 @@ const Login = () => {
           : error.message === "Network Error"
             ? "Cannot reach server. Please ensure backend is running."
             : "Login failed. Please try again.");
-      if (
-        error.response?.status === 403 &&
-        msg.toLowerCase().includes("admin")
-      ) {
+      if (error.response?.status === 403 && msg.toLowerCase().includes("admin")) {
         toast.error("Admin accounts must use the Admin Login page.");
         navigate("/admin-login");
         return;
@@ -74,8 +64,8 @@ const Login = () => {
           </div>
           <h1 className="text-4xl font-bold text-gradient mb-2">RailMadad</h1>
           <p className="text-gray-600">
-            Registered user login. Complaint tracking without login is available
-            from the public tracker.
+            Registered user login. Complaint tracking without login is available from the public
+            tracker.
           </p>
         </div>
 
@@ -94,9 +84,7 @@ const Login = () => {
                     <p className="text-sm font-extrabold text-gray-800 leading-snug">
                       File a Railway Complaint
                     </p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Quick · Instant
-                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">Quick · Instant</p>
                   </div>
                 </div>
                 <Link
@@ -112,15 +100,10 @@ const Login = () => {
 
         {/* ── Login Card ──────────────────────────────────────────────────────── */}
         <div className="card-glass animate-slide-up">
-          <h2 className="text-2xl font-bold text-railway-dark mb-5">
-            Login to Your Account
-          </h2>
+          <h2 className="text-2xl font-bold text-railway-dark mb-5">Login to Your Account</h2>
           <p className="text-sm text-gray-500 mb-5">
             If you received a tracking ID and password by SMS or email, use{" "}
-            <Link
-              to="/track"
-              className="text-railway-blue font-semibold hover:underline"
-            >
+            <Link to="/track" className="text-railway-blue font-semibold hover:underline">
               Track Complaint
             </Link>{" "}
             instead of this login form.
@@ -137,9 +120,7 @@ const Login = () => {
                   type="text"
                   name="email"
                   value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="input-field pl-10"
                   placeholder="you@email.com / 9876543210 / TRK-AB12CD34"
                   autoComplete="username"
@@ -150,9 +131,7 @@ const Login = () => {
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-semibold text-gray-700">
-                  Password
-                </label>
+                <label className="block text-sm font-semibold text-gray-700">Password</label>
                 <Link
                   to="/forgot-password"
                   className="text-xs text-railway-blue hover:underline font-medium"
@@ -166,9 +145,7 @@ const Login = () => {
                   type="password"
                   name="password"
                   value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   className="input-field pl-10"
                   placeholder="••••••••"
                   required
@@ -176,22 +153,15 @@ const Login = () => {
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary w-full"
-            >
+            <button type="submit" disabled={loading} className="btn-primary w-full">
               {loading ? "Logging in..." : "Login & Track My Complaint"}
             </button>
           </form>
 
           {/* ── Register & Admin links ──────────────────────────────────────── */}
           <p className="mt-6 text-center text-gray-600">
-            Don't have an account?{" "}
-            <Link
-              to="/register"
-              className="text-railway-blue font-semibold hover:underline"
-            >
+            Don&apos;t have an account?{" "}
+            <Link to="/register" className="text-railway-blue font-semibold hover:underline">
               Register here
             </Link>
           </p>
