@@ -80,6 +80,15 @@ const adminRoutes = require("./routes/admin.routes");
 // Initialize Express app
 const app = express();
 
+app.get("/health", (req, res) => {
+  res.json({
+    success: true,
+    status: "ok",
+    uptime: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Middleware
 app.use(compression()); // gzip all responses
 app.use(
@@ -198,7 +207,10 @@ async function startServer() {
   });
 }
 
-if (process.env.NODE_ENV !== "production" || cluster.isWorker) {
+if (
+  (process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test") ||
+  cluster.isWorker
+) {
   startServer().catch((err) => {
     logger.error("❌ Failed to start server", { message: err.message, stack: err.stack });
     process.exit(1);
