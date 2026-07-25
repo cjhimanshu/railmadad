@@ -9,7 +9,6 @@ import {
   FaEdit,
   FaEnvelope,
   FaFilter,
-  FaLock,
   FaPhone,
   FaRedo,
   FaSave,
@@ -152,9 +151,7 @@ const RecordPill = ({ value, type = "status" }) => {
 const InfoRow = ({ label, value, mono = false }) => (
   <div className="flex items-start justify-between gap-3 py-2 text-sm">
     <span className="text-slate-500">{label}</span>
-    <span
-      className={`text-right text-slate-800 ${mono ? "font-mono text-xs sm:text-sm" : ""}`}
-    >
+    <span className={`text-right text-slate-800 ${mono ? "font-mono text-xs sm:text-sm" : ""}`}>
       {value || "-"}
     </span>
   </div>
@@ -212,12 +209,8 @@ const ComplaintHistory = ({ complaint }) => {
               </div>
               <div className={`flex-1 rounded-xl border p-3 ${style.shell}`}>
                 <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                  <span className={`text-sm font-semibold ${style.label}`}>
-                    {entry.label}
-                  </span>
-                  <span className="text-xs text-slate-400">
-                    {formatDate(entry.time)}
-                  </span>
+                  <span className={`text-sm font-semibold ${style.label}`}>{entry.label}</span>
+                  <span className="text-xs text-slate-400">{formatDate(entry.time)}</span>
                 </div>
                 <p className="text-sm text-slate-600">{entry.detail}</p>
               </div>
@@ -244,15 +237,12 @@ const ComplaintCard = ({ complaint, onRefresh }) => {
   const [actionNotes, setActionNotes] = useState("");
 
   const canClose =
-    complaint.authorityMarkedDone &&
-    complaint.customerMarkedDone &&
-    !complaint.closureBlocked;
+    complaint.authorityMarkedDone && complaint.customerMarkedDone && !complaint.closureBlocked;
   const isResolved = complaint.status === "resolved";
   const contactName = complaint.userId?.name || "Guest passenger";
   const contactEmail = complaint.contactEmail || complaint.userId?.email || "-";
   const contactPhone = complaint.contactMobile || complaint.userId?.phone || "-";
-  const style =
-    PRIORITY_CARD_STYLES[complaint.priority] || PRIORITY_CARD_STYLES.medium;
+  const style = PRIORITY_CARD_STYLES[complaint.priority] || PRIORITY_CARD_STYLES.medium;
 
   const handleSaveEdit = async (event) => {
     event.stopPropagation();
@@ -307,8 +297,7 @@ const ComplaintCard = ({ complaint, onRefresh }) => {
     try {
       await api.put(`/admin/complaints/${complaint._id}/status`, {
         status: "resolved",
-        adminNotes:
-          editData.adminNotes || complaint.adminNotes || "Closed by admin",
+        adminNotes: editData.adminNotes || complaint.adminNotes || "Closed by admin",
       });
       toast.success("Complaint closed.");
       onRefresh();
@@ -342,9 +331,7 @@ const ComplaintCard = ({ complaint, onRefresh }) => {
             </span>
           </div>
 
-          <h3 className="text-lg font-semibold text-slate-900">
-            {complaint.title}
-          </h3>
+          <h3 className="text-lg font-semibold text-slate-900">{complaint.title}</h3>
 
           <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-slate-600">
             <span className="inline-flex items-center gap-1.5">
@@ -376,31 +363,17 @@ const ComplaintCard = ({ complaint, onRefresh }) => {
           <div className="grid gap-4 lg:grid-cols-2">
             <SectionCard title="Complaint Record" tone="blue">
               <div className="divide-y divide-blue-100">
-                <InfoRow
-                  label="Complaint number"
-                  value={complaint.complaintNumber}
-                  mono={true}
-                />
-                <InfoRow
-                  label="Tracking ID"
-                  value={complaint.trackingUserId}
-                  mono={true}
-                />
+                <InfoRow label="Complaint number" value={complaint.complaintNumber} mono={true} />
+                <InfoRow label="Tracking ID" value={complaint.trackingUserId} mono={true} />
                 <InfoRow label="PNR number" value={complaint.pnrNumber} />
                 <InfoRow label="Train number" value={complaint.trainNumber} />
                 <InfoRow
                   label="Assigned department"
                   value={humanize(complaint.assignedDepartment)}
                 />
-                <InfoRow
-                  label="Tracking stage"
-                  value={TRACKING_LABELS[complaint.trackingStatus]}
-                />
+                <InfoRow label="Tracking stage" value={TRACKING_LABELS[complaint.trackingStatus]} />
                 <InfoRow label="Created" value={formatDate(complaint.createdAt)} />
-                <InfoRow
-                  label="Resolved"
-                  value={formatDate(complaint.resolvedAt)}
-                />
+                <InfoRow label="Resolved" value={formatDate(complaint.resolvedAt)} />
               </div>
             </SectionCard>
 
@@ -411,15 +384,11 @@ const ComplaintCard = ({ complaint, onRefresh }) => {
                 <InfoRow label="Mobile" value={contactPhone} />
                 <InfoRow
                   label="Authority action"
-                  value={
-                    complaint.authorityMarkedDone ? "Recorded" : "Pending"
-                  }
+                  value={complaint.authorityMarkedDone ? "Recorded" : "Pending"}
                 />
                 <InfoRow
                   label="Customer confirmation"
-                  value={
-                    complaint.customerMarkedDone ? "Recorded" : "Pending"
-                  }
+                  value={complaint.customerMarkedDone ? "Recorded" : "Pending"}
                 />
                 <InfoRow
                   label="Satisfaction"
@@ -441,8 +410,7 @@ const ComplaintCard = ({ complaint, onRefresh }) => {
 
               {complaint.authorityActionNotes ? (
                 <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-                  <strong>Latest authority note:</strong>{" "}
-                  {complaint.authorityActionNotes}
+                  <strong>Latest authority note:</strong> {complaint.authorityActionNotes}
                 </div>
               ) : null}
 
@@ -522,7 +490,11 @@ const ComplaintCard = ({ complaint, onRefresh }) => {
                   className="inline-flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-100 disabled:opacity-60"
                 >
                   {complaint.closureBlocked ? <FaRedo /> : <FaCheckCircle />}
-                  {closing ? "Saving..." : complaint.closureBlocked ? "Force close" : "Close complaint"}
+                  {closing
+                    ? "Saving..."
+                    : complaint.closureBlocked
+                      ? "Force close"
+                      : "Close complaint"}
                 </button>
               )}
             </div>
@@ -530,9 +502,7 @@ const ComplaintCard = ({ complaint, onRefresh }) => {
 
           {editing ? (
             <div className="mt-4 rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-4">
-              <h4 className="mb-3 text-sm font-semibold text-blue-800">
-                Update Complaint Record
-              </h4>
+              <h4 className="mb-3 text-sm font-semibold text-blue-800">Update Complaint Record</h4>
               <div className="grid gap-3 md:grid-cols-2">
                 <select
                   value={editData.status}
@@ -609,9 +579,7 @@ const ComplaintCard = ({ complaint, onRefresh }) => {
 
           {markingDone ? (
             <div className="mt-4 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-4">
-              <h4 className="mb-3 text-sm font-semibold text-emerald-800">
-                Record Action Taken
-              </h4>
+              <h4 className="mb-3 text-sm font-semibold text-emerald-800">Record Action Taken</h4>
               <textarea
                 rows="3"
                 value={actionNotes}
@@ -680,9 +648,7 @@ const ComplaintManagement = ({ onUpdate, initialFilter }) => {
       }
 
       const query = params.toString();
-      const response = await api.get(
-        `/admin/complaints${query ? `?${query}` : ""}`,
-      );
+      const response = await api.get(`/admin/complaints${query ? `?${query}` : ""}`);
       setComplaints(response.data.data || []);
     } catch (error) {
       console.error("Failed to load complaints", error);
@@ -727,19 +693,19 @@ const ComplaintManagement = ({ onUpdate, initialFilter }) => {
       complaint.pnrNumber,
       complaint.complaintNumber,
       complaint.trackingUserId,
-    ].some((value) => String(value || "").toLowerCase().includes(searchQuery));
+    ].some((value) =>
+      String(value || "")
+        .toLowerCase()
+        .includes(searchQuery)
+    );
   });
 
   const summary = {
     total: filteredComplaints.length,
-    pending: filteredComplaints.filter((item) => item.status === "pending")
-      .length,
-    inProgress: filteredComplaints.filter(
-      (item) => item.status === "in_progress",
-    ).length,
+    pending: filteredComplaints.filter((item) => item.status === "pending").length,
+    inProgress: filteredComplaints.filter((item) => item.status === "in_progress").length,
     blocked: filteredComplaints.filter((item) => item.closureBlocked).length,
-    resolved: filteredComplaints.filter((item) => item.status === "resolved")
-      .length,
+    resolved: filteredComplaints.filter((item) => item.status === "resolved").length,
   };
 
   return (
@@ -747,9 +713,7 @@ const ComplaintManagement = ({ onUpdate, initialFilter }) => {
       <div className="rounded-[1.8rem] border border-white/70 bg-white/85 p-5 shadow-lg shadow-slate-100 backdrop-blur-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-sm font-semibold text-slate-900">
-              Complaint records
-            </p>
+            <p className="text-sm font-semibold text-slate-900">Complaint records</p>
             <p className="text-sm text-slate-500">
               Search, update, and review the full record for each complaint.
             </p>
@@ -870,12 +834,8 @@ const ComplaintManagement = ({ onUpdate, initialFilter }) => {
               key={item.label}
               className={`rounded-2xl border bg-gradient-to-br px-4 py-3 shadow-sm ${item.shell}`}
             >
-              <p className="text-xs uppercase tracking-wide text-slate-400">
-                {item.label}
-              </p>
-              <p className={`mt-1 text-2xl font-semibold ${item.accent}`}>
-                {item.value}
-              </p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">{item.label}</p>
+              <p className={`mt-1 text-2xl font-semibold ${item.accent}`}>{item.value}</p>
             </div>
           ))}
         </div>
@@ -893,11 +853,7 @@ const ComplaintManagement = ({ onUpdate, initialFilter }) => {
       ) : (
         <div className="space-y-4">
           {filteredComplaints.map((complaint) => (
-            <ComplaintCard
-              key={complaint._id}
-              complaint={complaint}
-              onRefresh={handleRefresh}
-            />
+            <ComplaintCard key={complaint._id} complaint={complaint} onRefresh={handleRefresh} />
           ))}
         </div>
       )}

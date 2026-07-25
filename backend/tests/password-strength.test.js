@@ -8,6 +8,7 @@ process.env.JWT_SECRET = process.env.JWT_SECRET || "test_jwt_secret";
 process.env.JWT_EXPIRE = process.env.JWT_EXPIRE || "1h";
 
 const authRoutes = require("../routes/auth.routes");
+const User = require("../models/User");
 
 function createTestApp() {
   const app = express();
@@ -71,25 +72,45 @@ test("POST /api/auth/register rejects passwords without special character", asyn
 
 test("POST /api/auth/register accepts valid strong password", async () => {
   const app = createTestApp();
+  const originalFindOne = User.findOne;
+  const originalCreate = User.create;
 
-  const res = await request(app).post("/api/auth/register").send({
-    name: "Test User",
-    email: "strongpass@example.com",
-    password: "StrongP@ss123",
+  User.findOne = async () => null;
+  User.create = async (payload) => ({
+    _id: "507f1f77bcf86cd799439099",
+    name: payload.name,
+    email: payload.email,
+    role: "user",
+    phone: payload.phone,
+    isOtpUser: false,
+    toObject() {
+      return {
+        _id: this._id,
+        name: this.name,
+        email: this.email,
+        role: this.role,
+        phone: this.phone,
+        isOtpUser: this.isOtpUser,
+      };
+    },
   });
 
-  // Strong password passes validation — must return 201/success or explicit non-400 error.
-  // Fail if validation rejected it due to password strength.
-  if (res.status === 400) {
-    const msg = res.body.message || "";
-    assert.fail(
-      `Strong password was rejected. Message: ${msg}. ` +
-        `This may indicate a DB timeout or validation logic bug.`
-    );
-  }
+  try {
+    const res = await request(app).post("/api/auth/register").send({
+      name: "Test User",
+      email: "strongpass@example.com",
+      password: "StrongP@ss123",
+    });
 
-  // Non-400 status is acceptable (may be 201 if DB is available, or 409 if email exists, etc).
-  assert.notEqual(res.status, 400, "Strong password should not fail validation");
+    assert.equal(res.status, 201);
+    assert.equal(res.body.success, true);
+    assert.equal(res.body.data.user.email, "strongpass@example.com");
+    assert.equal(typeof res.body.data.token, "string");
+    assert.ok(res.body.data.token.length > 10);
+  } finally {
+    User.findOne = originalFindOne;
+    User.create = originalCreate;
+  }
 });
 
 test("POST /api/auth/admin-register enforces same password strength rules", async () => {

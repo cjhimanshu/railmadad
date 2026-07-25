@@ -109,7 +109,7 @@ module.exports = {
   requestLogger: (req, res, next) => {
     // Store request start time
     const startTime = Date.now();
-    const { method, path, query, ip } = req;
+    const { method, path, ip } = req;
 
     // Override res.json to intercept response
     const originalJson = res.json.bind(res);

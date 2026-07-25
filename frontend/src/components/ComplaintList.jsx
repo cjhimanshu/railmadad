@@ -162,8 +162,7 @@ const ComplaintList = ({ complaints, onUpdate, quickFilterStatus }) => {
   // satisfaction state: { [complaintId]: { rating: 0, comment: '', submitting: false } }
   const [satState, setSatState] = useState({});
 
-  const getSat = (id) =>
-    satState[id] || { rating: 0, comment: "", submitting: false };
+  const getSat = (id) => satState[id] || { rating: 0, comment: "", submitting: false };
   const setSat = (id, patch) =>
     setSatState((prev) => ({ ...prev, [id]: { ...getSat(id), ...patch } }));
 
@@ -179,7 +178,7 @@ const ComplaintList = ({ complaints, onUpdate, quickFilterStatus }) => {
       toast.success(
         rating < 3
           ? "Rating submitted. Complaint re-opened for further action."
-          : "Thank you for your feedback!",
+          : "Thank you for your feedback!"
       );
       if (onUpdate) onUpdate();
     } catch (err) {
@@ -231,7 +230,7 @@ const ComplaintList = ({ complaints, onUpdate, quickFilterStatus }) => {
     (c) =>
       (filterCategory === "all" || c.category === filterCategory) &&
       (filterPriority === "all" || c.priority === filterPriority) &&
-      (filterStatus === "all" || c.status === filterStatus),
+      (filterStatus === "all" || c.status === filterStatus)
   );
 
   // Sync when parent dashboard card changes the quick filter
@@ -246,9 +245,7 @@ const ComplaintList = ({ complaints, onUpdate, quickFilterStatus }) => {
       <div className="card text-center py-16">
         <FaTrain className="text-6xl text-gray-300 mx-auto mb-4" />
         <p className="text-gray-500 text-lg font-medium">No complaints yet</p>
-        <p className="text-gray-400 text-sm mt-1">
-          Submit your first complaint to get started
-        </p>
+        <p className="text-gray-400 text-sm mt-1">Submit your first complaint to get started</p>
       </div>
     );
   }
@@ -311,8 +308,7 @@ const ComplaintList = ({ complaints, onUpdate, quickFilterStatus }) => {
         const cat = categoryConfig[complaint.category] || categoryConfig.other;
         const pri = priorityConfig[complaint.priority] || priorityConfig.medium;
         const sta = statusConfig[complaint.status] || statusConfig.pending;
-        const sen =
-          sentimentConfig[complaint.sentiment] || sentimentConfig.neutral;
+        const sen = sentimentConfig[complaint.sentiment] || sentimentConfig.neutral;
         const CatIcon = cat.icon;
         const StaIcon = sta.icon;
         const isExpanded = expandedId === complaint._id;
@@ -324,15 +320,10 @@ const ComplaintList = ({ complaints, onUpdate, quickFilterStatus }) => {
             className={`bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border-l-4 ${cat.border} overflow-hidden`}
           >
             {/* Card Header */}
-            <div
-              className="p-5 cursor-pointer"
-              onClick={() => toggleExpand(complaint._id)}
-            >
+            <div className="p-5 cursor-pointer" onClick={() => toggleExpand(complaint._id)}>
               <div className="flex justify-between items-start gap-4">
                 {/* Category Icon */}
-                <div
-                  className={`p-3 rounded-xl border ${cat.color} flex-shrink-0`}
-                >
+                <div className={`p-3 rounded-xl border ${cat.color} flex-shrink-0`}>
                   <CatIcon className="text-xl" />
                 </div>
 
@@ -343,25 +334,17 @@ const ComplaintList = ({ complaints, onUpdate, quickFilterStatus }) => {
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {/* Status */}
-                    <span
-                      className={`badge ${sta.color} flex items-center gap-1`}
-                    >
+                    <span className={`badge ${sta.color} flex items-center gap-1`}>
                       <StaIcon className="text-xs" />
                       {sta.label}
                     </span>
                     {/* Priority */}
-                    <span
-                      className={`badge ${pri.color} flex items-center gap-1`}
-                    >
-                      <span
-                        className={`w-2 h-2 rounded-full ${pri.dot}`}
-                      ></span>
+                    <span className={`badge ${pri.color} flex items-center gap-1`}>
+                      <span className={`w-2 h-2 rounded-full ${pri.dot}`}></span>
                       {pri.label}
                     </span>
                     {/* Category */}
-                    <span
-                      className={`badge border ${cat.color} flex items-center gap-1`}
-                    >
+                    <span className={`badge border ${cat.color} flex items-center gap-1`}>
                       <CatIcon className="text-xs" />
                       {cat.label}
                     </span>
@@ -478,9 +461,7 @@ const ComplaintList = ({ complaints, onUpdate, quickFilterStatus }) => {
                       <div className="bg-white rounded-lg p-3 border border-blue-100 text-center">
                         <p className="text-xs text-gray-400 mb-1">Category</p>
                         <p className="font-bold text-sm text-blue-700 capitalize">
-                          {(
-                            complaint.aiSuggestions.suggestedCategory || ""
-                          ).replace(/_/g, " ")}
+                          {(complaint.aiSuggestions.suggestedCategory || "").replace(/_/g, " ")}
                         </p>
                       </div>
                       <div className="bg-white rounded-lg p-3 border border-blue-100 text-center">
@@ -491,9 +472,7 @@ const ComplaintList = ({ complaints, onUpdate, quickFilterStatus }) => {
                       </div>
                       <div className="bg-white rounded-lg p-3 border border-blue-100 text-center col-span-2 md:col-span-1">
                         <p className="text-xs text-gray-400 mb-1">Sentiment</p>
-                        <p className="font-bold text-sm capitalize">
-                          {sen.label}
-                        </p>
+                        <p className="font-bold text-sm capitalize">{sen.label}</p>
                       </div>
                     </div>
                     {complaint.aiSuggestions.suggestedResponse && (
@@ -502,7 +481,7 @@ const ComplaintList = ({ complaints, onUpdate, quickFilterStatus }) => {
                           Suggested Response
                         </p>
                         <p className="text-gray-600 text-sm italic leading-relaxed">
-                          "{complaint.aiSuggestions.suggestedResponse}"
+                          &ldquo;{complaint.aiSuggestions.suggestedResponse}&rdquo;
                         </p>
                       </div>
                     )}
@@ -526,12 +505,8 @@ const ComplaintList = ({ complaints, onUpdate, quickFilterStatus }) => {
                 {/* Admin Notes */}
                 {complaint.adminNotes && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-yellow-800 mb-1 text-sm">
-                      📋 Admin Notes
-                    </h4>
-                    <p className="text-gray-700 text-sm">
-                      {complaint.adminNotes}
-                    </p>
+                    <h4 className="font-semibold text-yellow-800 mb-1 text-sm">📋 Admin Notes</h4>
+                    <p className="text-gray-700 text-sm">{complaint.adminNotes}</p>
                   </div>
                 )}
 
@@ -570,209 +545,184 @@ const ComplaintList = ({ complaints, onUpdate, quickFilterStatus }) => {
                     )}
                     {complaint.resolvedAt && (
                       <span className="text-green-600 flex items-center gap-1 badge bg-green-100 border border-green-300">
-                        <FaCheckCircle /> Resolved{" "}
-                        {formatDate(complaint.resolvedAt)}
+                        <FaCheckCircle /> Resolved {formatDate(complaint.resolvedAt)}
                       </span>
                     )}
                   </div>
                 </div>
 
                 {/* ── User Satisfaction & Confirm Resolution ── */}
-                {complaint.authorityMarkedDone &&
-                  complaint.status !== "resolved" && (
-                    <div
-                      className={`rounded-xl p-4 border-2 ${
-                        complaint.closureBlocked
-                          ? "bg-red-50 border-red-300"
-                          : "bg-indigo-50 border-indigo-300"
-                      }`}
-                    >
-                      {complaint.closureBlocked ? (
-                        <div className="flex items-start gap-3">
-                          <FaLock className="text-red-500 text-xl mt-0.5" />
+                {complaint.authorityMarkedDone && complaint.status !== "resolved" && (
+                  <div
+                    className={`rounded-xl p-4 border-2 ${
+                      complaint.closureBlocked
+                        ? "bg-red-50 border-red-300"
+                        : "bg-indigo-50 border-indigo-300"
+                    }`}
+                  >
+                    {complaint.closureBlocked ? (
+                      <div className="flex items-start gap-3">
+                        <FaLock className="text-red-500 text-xl mt-0.5" />
+                        <div>
+                          <p className="font-bold text-red-700 text-sm">Complaint Re-opened</p>
+                          <p className="text-xs text-red-600 mt-1">
+                            {complaint.closureBlockedReason}
+                          </p>
+                          <p className="text-xs text-red-500 mt-1">
+                            The authority has been notified to re-address your issue.
+                          </p>
+                        </div>
+                      </div>
+                    ) : complaint.customerMarkedDone && complaint.satisfactionRating ? (
+                      <div className="flex items-center gap-2 text-green-700">
+                        <FaCheckCircle className="text-xl" />
+                        <span className="font-semibold text-sm">
+                          You confirmed resolution. Rating: {complaint.satisfactionRating}/5
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <FaThumbsUp className="text-indigo-600 text-lg" />
                           <div>
-                            <p className="font-bold text-red-700 text-sm">
-                              Complaint Re-opened
+                            <p className="font-bold text-indigo-800 text-sm">
+                              Authority has taken action!
                             </p>
-                            <p className="text-xs text-red-600 mt-1">
-                              {complaint.closureBlockedReason}
-                            </p>
-                            <p className="text-xs text-red-500 mt-1">
-                              The authority has been notified to re-address your
-                              issue.
+                            <p className="text-xs text-indigo-600">
+                              Action taken: {complaint.authorityActionNotes || "See details above"}
                             </p>
                           </div>
                         </div>
-                      ) : complaint.customerMarkedDone &&
-                        complaint.satisfactionRating ? (
-                        <div className="flex items-center gap-2 text-green-700">
-                          <FaCheckCircle className="text-xl" />
-                          <span className="font-semibold text-sm">
-                            You confirmed resolution. Rating:{" "}
-                            {complaint.satisfactionRating}/5
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <FaThumbsUp className="text-indigo-600 text-lg" />
-                            <div>
-                              <p className="font-bold text-indigo-800 text-sm">
-                                Authority has taken action!
-                              </p>
-                              <p className="text-xs text-indigo-600">
-                                Action taken:{" "}
-                                {complaint.authorityActionNotes ||
-                                  "See details above"}
-                              </p>
-                            </div>
-                          </div>
 
-                          {/* Star rating */}
-                          {!complaint.satisfactionRating && (
-                            <div>
-                              <p className="text-xs font-semibold text-gray-700 mb-2">
-                                Rate your satisfaction (required to close):
-                              </p>
-                              <div className="flex gap-1 mb-2">
-                                {[1, 2, 3, 4, 5].map((s) => (
-                                  <button
-                                    key={s}
-                                    onClick={() =>
-                                      setSat(complaint._id, { rating: s })
-                                    }
-                                    className={`text-2xl transition-transform hover:scale-110 ${
-                                      getSat(complaint._id).rating >= s
-                                        ? "text-yellow-400"
-                                        : "text-gray-300"
-                                    }`}
-                                  >
-                                    <FaStar />
-                                  </button>
-                                ))}
-                                {getSat(complaint._id).rating > 0 && (
-                                  <span className="ml-2 text-sm font-semibold self-center text-gray-600">
-                                    {
-                                      [
-                                        "",
-                                        "Very Dissatisfied",
-                                        "Dissatisfied",
-                                        "Neutral",
-                                        "Satisfied",
-                                        "Very Satisfied",
-                                      ][getSat(complaint._id).rating]
-                                    }
-                                  </span>
-                                )}
-                              </div>
-                              <textarea
-                                placeholder="Optional comment about the resolution..."
-                                value={getSat(complaint._id).comment}
-                                onChange={(e) =>
-                                  setSat(complaint._id, {
-                                    comment: e.target.value,
-                                  })
-                                }
-                                className="input-field text-sm w-full"
-                                rows="2"
-                              />
-                              {getSat(complaint._id).rating < 3 &&
-                                getSat(complaint._id).rating > 0 && (
-                                  <p className="text-xs text-red-600 mt-1">
-                                    ⚠ Rating below 3 will reopen the complaint
-                                    for further action.
-                                  </p>
-                                )}
-                              <button
-                                onClick={() =>
-                                  handleSubmitRating(complaint._id)
-                                }
-                                disabled={getSat(complaint._id).submitting}
-                                className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition disabled:opacity-60"
-                              >
-                                {getSat(complaint._id).submitting
-                                  ? "Submitting..."
-                                  : "Submit Rating"}
-                              </button>
-                            </div>
-                          )}
-
-                          {/* Confirm close button (only if rated >= 3) */}
-                          {complaint.satisfactionRating >= 3 &&
-                            !complaint.customerMarkedDone && (
-                              <div className="pt-2 border-t border-indigo-200">
-                                <p className="text-xs text-green-700 mb-2">
-                                  You rated {complaint.satisfactionRating}/5.
-                                  You can now confirm closure.
-                                </p>
+                        {/* Star rating */}
+                        {!complaint.satisfactionRating && (
+                          <div>
+                            <p className="text-xs font-semibold text-gray-700 mb-2">
+                              Rate your satisfaction (required to close):
+                            </p>
+                            <div className="flex gap-1 mb-2">
+                              {[1, 2, 3, 4, 5].map((s) => (
                                 <button
-                                  onClick={() =>
-                                    handleConfirmResolved(complaint._id)
-                                  }
-                                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition"
+                                  key={s}
+                                  onClick={() => setSat(complaint._id, { rating: s })}
+                                  className={`text-2xl transition-transform hover:scale-110 ${
+                                    getSat(complaint._id).rating >= s
+                                      ? "text-yellow-400"
+                                      : "text-gray-300"
+                                  }`}
                                 >
-                                  <FaCheckCircle /> Confirm — Issue Resolved
+                                  <FaStar />
                                 </button>
-                              </div>
-                            )}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                              ))}
+                              {getSat(complaint._id).rating > 0 && (
+                                <span className="ml-2 text-sm font-semibold self-center text-gray-600">
+                                  {
+                                    [
+                                      "",
+                                      "Very Dissatisfied",
+                                      "Dissatisfied",
+                                      "Neutral",
+                                      "Satisfied",
+                                      "Very Satisfied",
+                                    ][getSat(complaint._id).rating]
+                                  }
+                                </span>
+                              )}
+                            </div>
+                            <textarea
+                              placeholder="Optional comment about the resolution..."
+                              value={getSat(complaint._id).comment}
+                              onChange={(e) =>
+                                setSat(complaint._id, {
+                                  comment: e.target.value,
+                                })
+                              }
+                              className="input-field text-sm w-full"
+                              rows="2"
+                            />
+                            {getSat(complaint._id).rating < 3 &&
+                              getSat(complaint._id).rating > 0 && (
+                                <p className="text-xs text-red-600 mt-1">
+                                  ⚠ Rating below 3 will reopen the complaint for further action.
+                                </p>
+                              )}
+                            <button
+                              onClick={() => handleSubmitRating(complaint._id)}
+                              disabled={getSat(complaint._id).submitting}
+                              className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition disabled:opacity-60"
+                            >
+                              {getSat(complaint._id).submitting ? "Submitting..." : "Submit Rating"}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Confirm close button (only if rated >= 3) */}
+                        {complaint.satisfactionRating >= 3 && !complaint.customerMarkedDone && (
+                          <div className="pt-2 border-t border-indigo-200">
+                            <p className="text-xs text-green-700 mb-2">
+                              You rated {complaint.satisfactionRating}/5. You can now confirm
+                              closure.
+                            </p>
+                            <button
+                              onClick={() => handleConfirmResolved(complaint._id)}
+                              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition"
+                            >
+                              <FaCheckCircle /> Confirm — Issue Resolved
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* ── Close Complaint (user-initiated) ── */}
-                {complaint.status !== "resolved" &&
-                  complaint.status !== "rejected" && (
-                    <div className="rounded-xl p-4 border-2 bg-emerald-50 border-emerald-200">
-                      {closeConfirmId === complaint._id ? (
-                        <div>
-                          <p className="text-sm font-semibold text-emerald-800 mb-3">
-                            Are you satisfied with the resolution? Closing this
-                            complaint marks it as resolved.
-                          </p>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() =>
-                                handleCloseComplaint(complaint._id)
-                              }
-                              disabled={closingId === complaint._id}
-                              className="flex items-center gap-1 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition disabled:opacity-60"
-                            >
-                              <FaCheckCircle />
-                              {closingId === complaint._id
-                                ? "Closing..."
-                                : "Yes, Close Complaint"}
-                            </button>
-                            <button
-                              onClick={() => setCloseConfirmId(null)}
-                              disabled={closingId === complaint._id}
-                              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200 transition"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-emerald-800">
-                              Satisfied with the resolution?
-                            </p>
-                            <p className="text-xs text-emerald-600 mt-0.5">
-                              Close this complaint if your issue has been
-                              addressed.
-                            </p>
-                          </div>
+                {complaint.status !== "resolved" && complaint.status !== "rejected" && (
+                  <div className="rounded-xl p-4 border-2 bg-emerald-50 border-emerald-200">
+                    {closeConfirmId === complaint._id ? (
+                      <div>
+                        <p className="text-sm font-semibold text-emerald-800 mb-3">
+                          Are you satisfied with the resolution? Closing this complaint marks it as
+                          resolved.
+                        </p>
+                        <div className="flex gap-2">
                           <button
-                            onClick={() => setCloseConfirmId(complaint._id)}
-                            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-all whitespace-nowrap"
+                            onClick={() => handleCloseComplaint(complaint._id)}
+                            disabled={closingId === complaint._id}
+                            className="flex items-center gap-1 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition disabled:opacity-60"
                           >
-                            <FaCheckCircle /> Close Complaint
+                            <FaCheckCircle />
+                            {closingId === complaint._id ? "Closing..." : "Yes, Close Complaint"}
+                          </button>
+                          <button
+                            onClick={() => setCloseConfirmId(null)}
+                            disabled={closingId === complaint._id}
+                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200 transition"
+                          >
+                            Cancel
                           </button>
                         </div>
-                      )}
-                    </div>
-                  )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-emerald-800">
+                            Satisfied with the resolution?
+                          </p>
+                          <p className="text-xs text-emerald-600 mt-0.5">
+                            Close this complaint if your issue has been addressed.
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setCloseConfirmId(complaint._id)}
+                          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-all whitespace-nowrap"
+                        >
+                          <FaCheckCircle /> Close Complaint
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Automation Log */}
                 {complaint.automationLog?.length > 0 && (
@@ -782,10 +732,7 @@ const ComplaintList = ({ complaints, onUpdate, quickFilterStatus }) => {
                     </h4>
                     <div className="space-y-2 max-h-48 overflow-y-auto">
                       {complaint.automationLog.map((log, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-start gap-3 text-xs"
-                        >
+                        <div key={idx} className="flex items-start gap-3 text-xs">
                           <span
                             className={`flex-shrink-0 px-2 py-0.5 rounded-full font-bold uppercase tracking-wide ${
                               log.action === "AUTO_RESOLVED"
@@ -803,9 +750,7 @@ const ComplaintList = ({ complaints, onUpdate, quickFilterStatus }) => {
                           </span>
                           <div className="flex-1">
                             <p className="text-gray-600">{log.details}</p>
-                            <p className="text-gray-400 mt-0.5">
-                              {formatDate(log.performedAt)}
-                            </p>
+                            <p className="text-gray-400 mt-0.5">{formatDate(log.performedAt)}</p>
                           </div>
                         </div>
                       ))}

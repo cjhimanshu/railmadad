@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import api from "../utils/api";
-import { useAuth } from "../context/AuthContext";
 import { FaTrain, FaUser, FaEnvelope, FaLock, FaPhone } from "react-icons/fa";
 
 const Register = () => {
@@ -15,7 +14,6 @@ const Register = () => {
   });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -33,7 +31,8 @@ const Register = () => {
     setLoading(true);
 
     try {
-      const { confirmPassword, ...registerData } = formData;
+      const registerData = { ...formData };
+      delete registerData.confirmPassword;
       await api.post("/auth/register", registerData);
       toast.success("Registration successful! Please log in.");
       navigate("/login");
@@ -45,13 +44,10 @@ const Register = () => {
           : error.message === "Network Error"
             ? "Cannot reach server. Please ensure backend is running."
             : "Registration failed. Please try again.");
-      if (
-        error.response?.status === 400 &&
-        msg.toLowerCase().includes("already exists")
-      ) {
+      if (error.response?.status === 400 && msg.toLowerCase().includes("already exists")) {
         toast.error(
           "An account with this email already exists. If you submitted a complaint with this email, check your inbox for a password setup link — or use Forgot Password on the login page.",
-          { autoClose: 8000 },
+          { autoClose: 8000 }
         );
       } else {
         toast.error(msg);
@@ -77,16 +73,12 @@ const Register = () => {
 
         {/* Register Form */}
         <div className="card-glass animate-slide-up">
-          <h2 className="text-2xl font-bold text-railway-dark mb-6">
-            Register
-          </h2>
+          <h2 className="text-2xl font-bold text-railway-dark mb-6">Register</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Name */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Full Name
-              </label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
               <div className="relative">
                 <FaUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
@@ -140,9 +132,7 @@ const Register = () => {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Password
-              </label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
               <div className="relative">
                 <FaLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
@@ -178,11 +168,7 @@ const Register = () => {
             </div>
 
             {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary w-full"
-            >
+            <button type="submit" disabled={loading} className="btn-primary w-full">
               {loading ? "Creating Account..." : "Register"}
             </button>
           </form>
@@ -190,10 +176,7 @@ const Register = () => {
           {/* Login Link */}
           <p className="mt-6 text-center text-gray-600">
             Already have an account?{" "}
-            <Link
-              to="/login"
-              className="text-railway-blue font-semibold hover:underline"
-            >
+            <Link to="/login" className="text-railway-blue font-semibold hover:underline">
               Login here
             </Link>
           </p>

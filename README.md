@@ -1,56 +1,29 @@
 # RailMadad
 
-AI-assisted railway complaint management platform (MERN).
+RailMadad is an AI-assisted railway complaint management platform built with the MERN stack. Passengers can submit and track complaints, while admins can triage issues, dispatch work, and monitor progress from a dashboard.
 
-RailMadad helps passengers submit and track complaints while providing admins tools to triage, dispatch, and resolve issues faster. The codebase demonstrates API design, auth, background processing, file uploads, and AI-assisted automation.
+Live demo: https://railmadad-gamma.vercel.app/
 
-Live demo
+Repository: https://github.com/cjhimanshu/railmadad
 
-- RailMadad: https://railmadad-gamma.vercel.app/
-
-Highlights
-
-- Passenger complaint submission and public tracking
-- Admin dashboard with dispatch, analytics, and bulk actions
-- AI-assisted categorization, priority suggestion, sentiment analysis, and draft responses
-- Background jobs using BullMQ/Redis
-
-Quick links
-
-- Repository: https://github.com/cjhimanshu/railmadad
-
-Table of contents
-
-- Project
-- Features
-- Quick start (dev)
-- Docker
-- Environment
-- Scripts
-- Testing
-- Project structure
-- Contributing
-
-Project
-
-RailMadad is a focused helpdesk for railway passengers to report issues, track progress, and receive resolution confirmations. It's a practical example of a production-oriented MERN app with optional AI integrations.
-
-Features
+## What It Does
 
 - Complaint submission with attachments
-- Public tracking page for complaints
-- Admin panel with dispatch and analytics
-- Background workers for automation and AI tasks
+- Public complaint tracking
+- Admin dashboard for dispatch, analytics, and bulk actions
+- AI-assisted categorization, priority suggestion, sentiment analysis, and draft responses
+- Background jobs with BullMQ and Redis
+- Structured API responses and centralized logging for cleaner frontend handling and better observability
 
-Quick start (development)
+## Quick Start
 
-Prerequisites
+### Prerequisites
 
-- Node.js (16+ recommended) and npm
+- Node.js 16+ and npm
 - Git
-- Optional: Docker & Docker Compose (for local dependent services)
+- Optional: Docker and Docker Compose for local services
 
-Clone and install
+### Install
 
 ```bash
 git clone https://github.com/cjhimanshu/railmadad.git
@@ -58,80 +31,108 @@ cd railmadad
 npm run install-all
 ```
 
-Environment files
+### Environment Files
 
-Copy the example env files and set values for secrets and service URLs:
+Copy the example env files and fill in the values you need:
 
-- [backend/.env.example](backend/.env.example) → `backend/.env`
-- [frontend/.env.example](frontend/.env.example) → `frontend/.env`
+- [backend/.env.example](backend/.env.example) -> `backend/.env`
+- [frontend/.env.example](frontend/.env.example) -> `frontend/.env`
 
-At minimum configure `MONGODB_URI`, `JWT_SECRET`, and Cloudinary keys if you plan to upload files. For AI features provide `HUGGINGFACE_API_KEY` or other model keys.
+Minimum backend setup:
 
-Run locally
+- `MONGODB_URI`
+- `JWT_SECRET`
+- `JWT_EXPIRE`
 
-In one terminal (backend):
+Optional features:
+
+- `CLOUDINARY_*` for file uploads
+- `HUGGINGFACE_API_KEY` for AI integrations
+- `REDIS_URL` for BullMQ workers
+- `RESEND_API_KEY` or `TWILIO_*` for notifications
+
+### Run Locally
+
+Start the backend:
 
 ```bash
 npm run dev-backend
 ```
 
-In another terminal (frontend):
+Start the frontend in a separate terminal:
 
 ```bash
 npm run dev-frontend
 ```
 
-Defaults
+Default URLs:
 
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:5000
 
-Docker (local / CI)
+## Docker
 
-Spin up the app and recommended services (MongoDB, Redis) using Docker Compose from the repo root:
+Bring up the full stack from the repository root:
 
 ```bash
 docker-compose up --build
 ```
 
-Or build and run only the backend image:
+Backend-only image build:
 
 ```bash
 docker build -f backend/Dockerfile -t railmadad-backend ./backend
 docker run --env-file backend/.env -p 5000:5000 railmadad-backend
 ```
 
-Environment (key vars)
+## Scripts
 
-Required (examples)
+Root:
 
-- `PORT` — backend port
-- `MONGODB_URI` — MongoDB connection string
-- `JWT_SECRET`, `JWT_EXPIRE` — JWT auth
-- `CLOUDINARY_*` — Cloudinary upload credentials (optional)
-- `HUGGINGFACE_API_KEY` — AI integrations (optional)
+- `npm run install-all`
+- `npm run dev-backend`
+- `npm run dev-frontend`
+- `npm run build-frontend`
+- `npm run start-backend`
+- `npm run test-backend`
+- `npm run lint-all`
+- `npm run format-all`
+- `npm run docker:up`
+- `npm run docker:down`
+- `npm run docker:logs`
+- `npm run docker:build`
+- `npm run docker:clean`
 
-Recommended for production
+Backend:
 
-- `REDIS_URL` — Redis for BullMQ workers
-- `RESEND_API_KEY` / `TWILIO_*` — email/SMS providers
+- `npm start`
+- `npm run dev`
+- `npm test`
+- `npm run lint`
+- `npm run lint:fix`
+- `npm run format`
+- `npm run format:check`
 
-Scripts
+Frontend:
 
-- Root helpers: `npm run install-all`, `npm run dev-backend`, `npm run dev-frontend`, `npm run build-frontend`, `npm run start-backend`
-- Backend: `npm start`, `npm run dev`, `npm test`
-- Frontend: `npm run dev`, `npm run build`, `npm run preview`
+- `npm run dev`
+- `npm run build`
+- `npm run preview`
+- `npm run lint`
+- `npm run lint:fix`
+- `npm run format`
+- `npm run format:check`
 
-Testing
+## Testing
 
-Backend tests live in the `backend` folder. Run:
+Backend tests live in the `backend` folder. Run them with:
 
 ```bash
 cd backend
 npm test
 ```
 
-Project structure (short)
+## Project Structure
 
 ```text
 railmadad/
@@ -141,18 +142,19 @@ railmadad/
   README.md
 ```
 
-Contributing
+## Contributing
 
-See CONTRIBUTING.md for developer setup and PR guidelines.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and PR guidelines.
 
 1. Fork the repo and create a branch for your change.
 2. Add focused commits and tests for logic changes.
 3. Run `cd backend && npm test` before opening a PR.
 
-Operational notes
+## Operational Notes
 
-- Use `REDIS_URL` with a worker process in production to run BullMQ jobs and AI/background tasks reliably.
+- Use `REDIS_URL` with a worker process in production so BullMQ jobs and AI/background tasks run reliably.
+- The backend now uses centralized logging and standardized API responses, which makes debugging and frontend error handling more consistent.
 
-License
+## License
 
 ISC
